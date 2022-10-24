@@ -1,28 +1,34 @@
+from array import array
 import os
 import glob
-import pandas as pd
+
 from PIL import Image
+import pandas as pd
+from sklearn.model_selection import train_test_split
 
 import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-from sklearn.model_selection import train_test_split
+from torchvision import transforms
+
+from utils import csv_preprocess
 
 class CustomDataset(Dataset): # for train and validation
     def __init__(self,root,data,transform=None):
-        self.root = root
+        self.root = os.path.join(root,"images")
         self.data = data
         self.transform = transform
         
     def __len__(self):
         return len(self.data)
     def __getitem__(self,idx):
-        id, gender,race,age,path = self.data[idx]
-        for image_name in os.listdir(os.path.join(path)):
-            
+        id,gen,age,age_category,mask,label,img_path = self.data[idx]
+        path = os.path.join(self.root,img_path)
+        image = Image.open(path)
         if self.transform:
             image = self.transform(image)
-        pass
+        return image, label
+        
 
 class TestDataset(Dataset): # for test
     def __init__(self, img_paths, transform=None):
@@ -31,7 +37,6 @@ class TestDataset(Dataset): # for test
 
     def __getitem__(self, index):
         image = Image.open(self.img_paths[index])
-
         if self.transform:
             image = self.transform(image)
         return image
@@ -39,13 +44,34 @@ class TestDataset(Dataset): # for test
     def __len__(self):
         return len(self.img_paths)
 
+
 if __name__ == "__main__":
     train_dir = '/opt/ml/input/data/train'
+    batch_size = 16
     val_ratio = 0.3
     seed = 42
+
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+    transform = transforms.Compose([
+            transforms.RandomResizedCrop(size=256, scale=(0.2, 1.)),
+            transforms.RandomHorizontalFlip(),
+            #transforms.RandomRotation(degrees=(10,10)),
+            #transforms.RandomVerticalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=mean, std=std)])
     
     train_csv = pd.read_csv(os.path.join(train_dir, 'train.csv'))
-    data = train_csv.to_numpy()
-
+    data = csv_preprocess(os.path.join(train_dir,'images'),train_csv)
+    #print(data[100:130])
+    
     train_data,val_data = train_test_split(data,test_size=val_ratio, shuffle=True, random_state=seed)
-    train_dataset = CustomDataset(train_dir, train_data)
+    train_dataset = CustomDataset(train_dir, train_data, transform=transform)
+
+    train_loader = DataLoader(train_dataset,batch_size=batch_size,shuffle=True)
+    for img, label in train_loader:
+        print(img.shape,label)
+        break
+
+    tmp = iter(train_dataset)
+    img,label = next(tmp)
