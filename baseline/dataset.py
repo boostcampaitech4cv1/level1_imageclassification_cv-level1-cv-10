@@ -27,7 +27,7 @@ class CustomDataset(Dataset): # for train and validation
         image = Image.open(path)
         if self.transform:
             image = self.transform(image)
-        return image, label
+        return image, torch.tensor(label)
         
 
 class TestDataset(Dataset): # for test
@@ -63,7 +63,6 @@ if __name__ == "__main__":
     
     train_csv = pd.read_csv(os.path.join(train_dir, 'train.csv'))
     data = csv_preprocess(os.path.join(train_dir,'images'),train_csv)
-    #print(data[100:130])
     
     train_data,val_data = train_test_split(data,test_size=val_ratio, shuffle=True, random_state=seed)
     train_dataset = CustomDataset(train_dir, train_data, transform=transform)

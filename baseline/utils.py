@@ -1,6 +1,13 @@
 import os
 import numpy as np
 
+'''
+### class encoding ###
+[Mask] 0 : wear, 1 : incorrect, 2 : not wear
+[Gender] 0 : male, 1 : female
+[Age] 0 : <30, 1 : >=30 and <60, 3 : >=60
+'''
+
 def csv_preprocess(root,csv_file):
     data = []
     csv_file['gender'] = (csv_file['gender'] == 'female').astype('int')
