@@ -1,8 +1,9 @@
 import os
 import numpy as np
 
+import logging
+
 from torchvision import transforms
-from sklearn.metrics import f1_score
 
 '''
 ### class encoding ###
@@ -50,18 +51,18 @@ def build_transform(args=None,phase='train'):
         return train_transform, val_transform
     else:
         test_transform = transforms.Compose([
-                transforms.RandomResizedCrop(size=256, scale=(0.2, 1.)),
-                transforms.RandomHorizontalFlip(),
-                #transforms.RandomRotation(degrees=(10,10)),
-                #transforms.RandomVerticalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=mean, std=std)])
         return test_transform
 
-def custom_f1(label: torch.tensor, predicted: torch.tensor):
-    label, predicted = label.tolist(), predicted.tolist()
-    label = list(map(re_scoring, label))
-    predicted = list(map(logit_to_label, predicted))
-    predicted = list(map(re_scoring, predicted))
-    #print('<test> label : {:.0f} | predicted : {:.0f}'.format(sum(label),sum(predicted)))
-    return f1_score(y_true=label, y_pred=predicted, average='micro')
+def init_log(output_dir):
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(message)s',
+                        #datefmt='%Y%m%d-%H:%M:%S',
+                        datefmt='%H:%M:%S',
+                        filename=os.path.join(output_dir, 'log.log'),
+                        filemode='w')
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    logging.getLogger('').addHandler(console)
+    return logging
