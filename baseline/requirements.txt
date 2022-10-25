@@ -8,3 +8,4 @@ matplotlib==3.2.1
 
 ### Add ###
 timm==0.6.11
+black
