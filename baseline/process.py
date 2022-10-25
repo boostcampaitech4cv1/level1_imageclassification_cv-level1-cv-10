@@ -4,22 +4,18 @@ from datetime import datetime
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
 
 from utils import *
 from metric import accuracy, macro_f1
-from dataset import CustomDataset
-from model import CustomModel
-
 
 def train(args, model, loader, optimizer, scheduler, loss_fn, data_len):
     preds, labels = torch.tensor([]), torch.tensor([])
     total_loss, time = 0, datetime.now()
-    for img, label in tqdm(loader):
+    #for img, label in tqdm(loader):
+    for img, label in loader:
         img, label = img.cuda(), label.cuda()
         logit = model(img)
         loss = loss_fn(logit, label)
@@ -47,7 +43,8 @@ def validation(args, model, loader, loss_fn, data_len):
     preds, labels = torch.tensor([]), torch.tensor([])
     total_loss, time = 0, datetime.now()
     with torch.no_grad():
-        for img, label in tqdm(loader):
+        #for img, label in tqdm(loader):
+        for img, label in loader:
             img, label = img.cuda(), label.cuda()
             logit = model(img)
             loss = loss_fn(logit, label)
