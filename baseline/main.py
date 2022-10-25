@@ -29,15 +29,6 @@ TTA
 data preprocess (ex. background subtraction)
 '''
 
-def set_seed(seed=42):
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
@@ -51,9 +42,9 @@ if __name__ == "__main__":
     parser.add_argument('--in_size', type=int, default=224)
     parser.add_argument('--n_workers', type=int, default=4)
 
-    parser.add_argument("--print_iter", type=int, default=10)
-    parser.add_argument("--num_classes", type=int, default=100)
-    parser.add_argument('--dropout', type=float, default=0.2)
+    #parser.add_argument("--print_iter", type=int, default=10)
+    #parser.add_argument("--num_classes", type=int, default=100)
+    #parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument('--train_dir', type=str, default='/opt/ml/input/data/train')
     parser.add_argument('--save_dir', type=str, default='/opt/ml/experiment/')
     parser.add_argument('--experiment_name', type=str, default='test')
@@ -93,6 +84,7 @@ if __name__ == "__main__":
     for epoch in range(args.num_epochs):
         print("### epoch {} ###".format(epoch+1))
         ### train ###
+        model.train()
         train_preds, train_labels = torch.tensor([]), torch.tensor([])
         train_loss,time = 0,datetime.now()
         for img, label in tqdm(train_loader):
@@ -115,12 +107,10 @@ if __name__ == "__main__":
         print('[train] loss {:.3f} | f1 {:.3f} | acc {:.3f} | elapsed {}'.format(train_loss/len(train_dataset),train_f1,train_acc,elapsed))
 
         ### validation ###
-        val_logits, val_labels = torch.tensor([]), torch.tensor([])
-        val_total_loss = 0
         model.eval()
+        val_preds, val_labels = torch.tensor([]), torch.tensor([])
+        val_loss,time = 0,datetime.now()
         with torch.no_grad():
-            val_preds, val_labels = torch.tensor([]), torch.tensor([])
-            val_loss,time = 0,datetime.now()
             for img, label in tqdm(train_loader):
                 img,label = img.cuda(),label.cuda()
                 logit = model(img)

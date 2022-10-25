@@ -31,12 +31,14 @@ class CustomDataset(Dataset): # for train and validation
         
 
 class TestDataset(Dataset): # for test
-    def __init__(self, img_paths, transform=None):
+    def __init__(self,root, img_paths, transform=None):
+        self.root = root
         self.img_paths = img_paths
         self.transform = transform
 
     def __getitem__(self, index):
-        image = Image.open(self.img_paths[index])
+        path = os.path.join(self.root,self.img_paths[index])
+        image = Image.open(path)
         if self.transform:
             image = self.transform(image)
         return image

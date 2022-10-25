@@ -1,4 +1,6 @@
 import os
+import torch
+import random
 import numpy as np
 
 import logging
@@ -11,6 +13,15 @@ from torchvision import transforms
 [Gender] 0 : male, 1 : female
 [Age] 0 : <30, 1 : >=30 and <60, 3 : >=60
 '''
+def set_seed(seed=42):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
 def csv_preprocess(root,csv_file):
     data = []
     csv_file['gender'] = (csv_file['gender'] == 'female').astype('int')

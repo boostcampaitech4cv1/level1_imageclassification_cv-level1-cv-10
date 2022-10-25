@@ -14,7 +14,8 @@ from utils import csv_preprocess,build_transform
 class CustomModel(nn.Module):
     def __init__(self,args=None):
         super(CustomModel,self).__init__()
-        self.backbone = timm.create_model('resnet50', pretrained = True, num_classes = 18)
+        if args.backbone_name == 'resnet50':
+            self.backbone = timm.create_model('resnet50', pretrained = True, num_classes = 18)
 
     def forward(self, x):
         x = self.backbone(x)
