@@ -1,4 +1,3 @@
-from array import array
 import os
 import glob
 
@@ -23,6 +22,7 @@ class CustomDataset(Dataset): # for train and validation
         return len(self.data)
     def __getitem__(self,idx):
         id,gen,age,age_category,mask,label,img_path = self.data[idx]
+        gen,age,age_category,mask,label = int(gen),int(age),int(age_category),int(mask),int(label)
         path = os.path.join(self.root,img_path)
         image = Image.open(path)
         if self.transform:
