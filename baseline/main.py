@@ -114,7 +114,7 @@ if __name__ == "__main__":
             best_epoch, best_score = epoch, score
             torch.save(
                 {"model": model.state_dict()},
-                os.path.join(save_path, "model_" + str(epoch) + ".pth"),
+                os.path.join(save_path, "model_" + str(epoch+1) + ".pth"),
             )
-            print(">> SAVED model at {:02d}".format(epoch))
+            print(">> SAVED model at {:02d}".format(epoch+1))
         print("max epoch: {}, max score : {:.4f}\n".format(best_epoch, best_score))
