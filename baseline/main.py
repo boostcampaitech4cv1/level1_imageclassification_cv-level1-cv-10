@@ -18,6 +18,7 @@ from utils import *
 from metric import accuracy,macro_f1
 from dataset import CustomDataset
 from model import CustomModel
+from process import train, validation
 
 '''
 TODO
@@ -84,50 +85,14 @@ if __name__ == "__main__":
     for epoch in range(args.num_epochs):
         print("### epoch {} ###".format(epoch+1))
         ### train ###
-        model.train()
-        train_preds, train_labels = torch.tensor([]), torch.tensor([])
-        train_loss,time = 0,datetime.now()
-        for img, label in tqdm(train_loader):
-            img,label = img.cuda(),label.cuda()
-            logit = model(img)
-            loss = loss_fn(logit, label)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            pred = logit.argmax(dim=1)
-            train_preds = torch.cat((train_preds, pred.cpu()))
-            train_labels = torch.cat((train_labels, label.cpu()))
-            train_loss += loss.item()
-
-        scheduler.step()
-        train_f1 = macro_f1(train_labels,train_preds)
-        train_acc = accuracy(train_labels,train_preds)
-        elapsed = (datetime.now() - time)
-        print('[train] loss {:.3f} | f1 {:.3f} | acc {:.3f} | elapsed {}'.format(train_loss/len(train_dataset),train_f1,train_acc,elapsed))
+        train(args=args,model=model,loader=train_loader,optimizer=optimizer,scheduler=scheduler,loss_fn=loss_fn,data_len=len(train_dataset))
 
         ### validation ###
-        model.eval()
-        val_preds, val_labels = torch.tensor([]), torch.tensor([])
-        val_loss,time = 0,datetime.now()
-        with torch.no_grad():
-            for img, label in tqdm(train_loader):
-                img,label = img.cuda(),label.cuda()
-                logit = model(img)
-                pred = logit.argmax(dim=1)
-
-                val_preds = torch.cat((val_preds, pred.cpu()))
-                val_labels = torch.cat((val_labels, label.cpu()))
-                val_loss += loss.item()
-
-        val_f1 = macro_f1(train_labels,train_preds)
-        val_acc = accuracy(train_labels,train_preds)
-        elapsed = (datetime.now() - time)
-        print('[validation] loss {:.3f} | f1 {:.3f} | acc {:.3f} | elapsed {}'.format(val_loss/len(val_dataset),val_f1,val_acc,elapsed))
+        score = validation(args=args,model=model,loader=val_loader,loss_fn=loss_fn,data_len=len(val_dataset))
 
         ### save model ###
-        if best_score<val_f1:
-            best_epoch,best_score = epoch, val_f1
+        if best_score<score:
+            best_epoch,best_score = epoch, score
             torch.save({'model': model.state_dict()}, os.path.join(save_path, 'model_'+str(epoch)+'.pth'))
             print('>> SAVED model at {:02d}'.format(epoch))
         print('max epoch: {}, max score : {:.4f}'.format(best_epoch, best_score))
