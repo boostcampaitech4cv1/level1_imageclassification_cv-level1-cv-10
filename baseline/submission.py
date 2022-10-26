@@ -34,7 +34,9 @@ if __name__ == "__main__":
     parser.add_argument("--backbone_name", type=str, default="resnet50")
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--test_dir", type=str, default="/opt/ml/input/data/eval")
-    parser.add_argument("--model_path", type=str, default="/opt/ml/experiment/test")
+    
+    parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/baseline/centercrop_test") 
+    parser.add_argument("--target_model", type=str, default="model_50.pth")
     args = parser.parse_args()
 
     submission = pd.read_csv(os.path.join(args.test_dir, "info.csv"))
@@ -49,7 +51,7 @@ if __name__ == "__main__":
     model = CustomModel(args).cuda()
 
     ### load model ###
-    ckpt = torch.load(os.path.join(args.model_path, "model_1.pth"))
+    ckpt = torch.load(os.path.join(args.save_dir,args.target_model))
     model.load_state_dict(ckpt["model"])
     print("LOADED model")
     ### test ###
@@ -62,5 +64,5 @@ if __name__ == "__main__":
             pred = logit.argmax(dim=-1)
             all_predictions.extend(pred.cpu().numpy())
     submission["ans"] = all_predictions
-    submission.to_csv(os.path.join(args.model_path, "test.csv"), index=False)
+    submission.to_csv(os.path.join(args.save_dir, args.target_model.split('.')[0]+".csv"), index=False)
     print("test inference is done!")

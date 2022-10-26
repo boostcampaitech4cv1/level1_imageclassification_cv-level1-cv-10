@@ -12,7 +12,7 @@ import torch.nn as nn
 from utils import *
 from metric import accuracy, macro_f1
 
-def train(args, model, loader, optimizer, scheduler, loss_fn):
+def train(args, epoch, model, loader, optimizer, scheduler, loss_fn):
     preds, labels = torch.tensor([]), torch.tensor([])
     total_loss, time = 0, datetime.now()
     #for img, label in tqdm(loader):
@@ -38,10 +38,10 @@ def train(args, model, loader, optimizer, scheduler, loss_fn):
             total_loss / len(loader), f1, acc, elapsed
         )
     )
-    wandb.log({"train_loss":avg_loss,"train_f1":f1,"train_acc":acc})
+    wandb.log({"epoch":epoch,"train_loss":avg_loss,"train_f1":f1,"train_acc":acc})
 
 
-def validation(args, model, loader, loss_fn):
+def validation(args, epoch, model, loader, loss_fn):
     model.eval()
     preds, labels = torch.tensor([]), torch.tensor([])
     total_loss, time = 0, datetime.now()
@@ -66,5 +66,5 @@ def validation(args, model, loader, loss_fn):
             avg_loss, f1, acc, elapsed
         )
     )
-    wandb.log({"val_loss":avg_loss,"val_f1":f1,"val_acc":acc})
+    wandb.log({"epoch":epoch,"val_loss":avg_loss,"val_f1":f1,"val_acc":acc})
     return f1

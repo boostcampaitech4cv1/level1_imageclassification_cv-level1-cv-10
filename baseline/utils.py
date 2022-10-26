@@ -62,7 +62,8 @@ def build_transform(args=None, phase="train"):
     if phase == "train":
         train_transform = transforms.Compose(
             [
-                transforms.RandomResizedCrop(size=256, scale=(0.2, 1.0)),
+                #transforms.RandomResizedCrop(size=256, scale=(0.2, 1.0)),
+                transforms.CenterCrop(256),
                 transforms.RandomHorizontalFlip(),
                 # transforms.RandomRotation(degrees=(10,10)),
                 # transforms.RandomVerticalFlip(),
@@ -73,10 +74,7 @@ def build_transform(args=None, phase="train"):
 
         val_transform = transforms.Compose(
             [
-                transforms.RandomResizedCrop(size=256, scale=(0.2, 1.0)),
-                transforms.RandomHorizontalFlip(),
-                # transforms.RandomRotation(degrees=(10,10)),
-                # transforms.RandomVerticalFlip(),
+                transforms.CenterCrop(256),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=mean, std=std),
             ]
@@ -85,7 +83,7 @@ def build_transform(args=None, phase="train"):
     else:
         ### TTA 추가 가능 ###
         test_transform = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)]
+            [transforms.CenterCrop(256), transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)]
         )
         return test_transform
 

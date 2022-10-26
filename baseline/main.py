@@ -50,7 +50,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_dir", type=str, default="/opt/ml/input/data/train") 
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/") 
     parser.add_argument("--project_name", type=str, default="baseline") 
-    parser.add_argument("--experiment_name", type=str, default="2") 
+    parser.add_argument("--experiment_name", type=str, default="centercrop_test") 
     parser.add_argument("--backbone_name", type=str, default="resnet50") 
     args = parser.parse_args()
 
@@ -89,8 +89,8 @@ if __name__ == "__main__":
     #     [param for param in model.parameters() if param.requires_grad],
     #     lr=base_lr, weight_decay=1e-4, momentum=0.9)
 
-    scheduler = StepLR(optimizer, step_size=10, gamma=0.1) 
-    # scheduler = CosineAnnealingLR(optimizer, T_max=10)
+    #scheduler = StepLR(optimizer, step_size=10, gamma=0.1) 
+    scheduler = CosineAnnealingLR(optimizer, T_max=10)
 
     loss_fn = nn.CrossEntropyLoss().cuda()
 
@@ -100,6 +100,7 @@ if __name__ == "__main__":
         ### train ###
         train(
             args=args,
+            epoch=epoch,
             model=model,
             loader=train_loader,
             optimizer=optimizer,
@@ -110,6 +111,7 @@ if __name__ == "__main__":
         ### validation ###
         score = validation(
             args=args,
+            epoch=epoch,
             model=model,
             loader=val_loader,
             loss_fn=loss_fn,
