@@ -4,6 +4,7 @@ from datetime import datetime
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
+import wandb
 
 import torch
 import torch.nn as nn
@@ -31,11 +32,13 @@ def train(args, model, loader, optimizer, scheduler, loss_fn):
     f1 = macro_f1(labels, preds)
     acc = accuracy(labels, preds)
     elapsed = datetime.now() - time
+    avg_loss = total_loss/len(loader)
     print(
         "[train] loss {:.3f} | f1 {:.3f} | acc {:.3f} | elapsed {}".format(
             total_loss / len(loader), f1, acc, elapsed
         )
     )
+    wandb.log({"train_loss":avg_loss,"train_f1":f1,"train_acc":acc})
 
 
 def validation(args, model, loader, loss_fn):
@@ -57,9 +60,11 @@ def validation(args, model, loader, loss_fn):
     f1 = macro_f1(labels, preds)
     acc = accuracy(labels, preds)
     elapsed = datetime.now() - time
+    avg_loss = total_loss/len(loader)
     print(
         "[validation] loss {:.3f} | f1 {:.3f} | acc {:.3f} | elapsed {}".format(
-            total_loss / len(loader), f1, acc, elapsed
+            avg_loss, f1, acc, elapsed
         )
     )
+    wandb.log({"val_loss":avg_loss,"val_f1":f1,"val_acc":acc})
     return f1
