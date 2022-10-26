@@ -24,6 +24,7 @@ class CustomDataset(Dataset):  # for train and validation
 
     def __getitem__(self, idx):
         id, gen, age, age_category, mask, label, img_path = self.data[idx]
+        ### 실제 데이터 다 넘김 ###
         gen, age, age_category, mask, label = (
             int(gen),
             int(age),

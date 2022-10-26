@@ -49,7 +49,7 @@ if __name__ == "__main__":
     model = CustomModel(args).cuda()
 
     ### load model ###
-    ckpt = torch.load(os.path.join(args.model_path, "model_0.pth"))
+    ckpt = torch.load(os.path.join(args.model_path, "model_1.pth"))
     model.load_state_dict(ckpt["model"])
     print("LOADED model")
     ### test ###

@@ -83,6 +83,7 @@ def build_transform(args=None, phase="train"):
         )
         return train_transform, val_transform
     else:
+        ### TTA 추가 가능 ###
         test_transform = transforms.Compose(
             [transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)]
         )
