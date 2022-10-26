@@ -47,7 +47,7 @@ if __name__ == "__main__":
     # parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument("--train_dir", type=str, default="/opt/ml/input/data/train") 
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/") 
-    parser.add_argument("--experiment_name", type=str, default="test") 
+    parser.add_argument("--experiment_name", type=str, default="baseline") 
     parser.add_argument("--backbone_name", type=str, default="resnet50") 
     args = parser.parse_args()
 
@@ -88,8 +88,8 @@ if __name__ == "__main__":
     loss_fn = nn.CrossEntropyLoss().cuda()
 
     best_epoch, best_score = 0, 0
-    for epoch in range(args.num_epochs):
-        print("### epoch {} ###".format(epoch + 1))
+    for epoch in range(1,args.num_epochs+1):
+        print("### epoch {} ###".format(epoch))
         ### train ###
         train(
             args=args,
@@ -98,7 +98,6 @@ if __name__ == "__main__":
             optimizer=optimizer,
             scheduler=scheduler,
             loss_fn=loss_fn,
-            data_len=len(train_dataset),
         )
 
         ### validation ###
@@ -107,7 +106,6 @@ if __name__ == "__main__":
             model=model,
             loader=val_loader,
             loss_fn=loss_fn,
-            data_len=len(val_dataset),
         )
 
         ### save model ###
@@ -115,7 +113,7 @@ if __name__ == "__main__":
             best_epoch, best_score = epoch, score
             torch.save(
                 {"model": model.state_dict()},
-                os.path.join(save_path, "model_" + str(epoch+1) + ".pth"),
+                os.path.join(save_path, "model_" + str(epoch) + ".pth"),
             )
-            print(">> SAVED model at {:02d}".format(epoch+1))
+            print(">> SAVED model at {:02d}".format(epoch))
         print("max epoch: {}, max score : {:.4f}\n".format(best_epoch, best_score))
