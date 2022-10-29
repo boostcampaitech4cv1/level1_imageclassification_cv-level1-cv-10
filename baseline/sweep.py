@@ -27,12 +27,12 @@ TTA
 data preprocess (ex. background subtraction)
 """
 
+
 def main():
-    global global_args,best_score,num_save
+    global global_args, best_score, num_save
     wandb.init()
     wandb.config.update(global_args)
     args = wandb.config
-    
 
     train_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
     data = csv_preprocess(os.path.join(args.train_dir, "images"), train_csv)
@@ -41,13 +41,25 @@ def main():
         data, test_size=args.val_ratio, shuffle=True, random_state=args.seed
     )
 
-    train_transform, val_transform = build_transform(args=args, phase="train") # data augmentation
+    train_transform, val_transform = build_transform(
+        args=args, phase="train"
+    )  # data augmentation
 
-    train_dataset = CustomDataset(args.train_dir, train_data, transform=train_transform) 
-    val_dataset = CustomDataset(args.train_dir, val_data, transform=val_transform) 
+    train_dataset = CustomDataset(args.train_dir, train_data, transform=train_transform)
+    val_dataset = CustomDataset(args.train_dir, val_data, transform=val_transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,num_workers=args.n_workers)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,num_workers=args.n_workers)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.n_workers,
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.n_workers,
+    )
 
     model = CustomModel(args).cuda()
 
@@ -60,13 +72,13 @@ def main():
     #     [param for param in model.parameters() if param.requires_grad],
     #     lr=base_lr, weight_decay=1e-4, momentum=0.9)
 
-    #scheduler = StepLR(optimizer, step_size=10, gamma=0.1) 
+    # scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
     scheduler = CosineAnnealingLR(optimizer, T_max=10)
 
     loss_fn = nn.CrossEntropyLoss().cuda()
 
     best_score = 0
-    for epoch in range(1,args.num_epochs+1):
+    for epoch in range(1, args.num_epochs + 1):
         print("### epoch {} ###".format(epoch))
         ### train ###
         train(
@@ -95,24 +107,29 @@ def main():
                 {"model": model.state_dict()},
                 os.path.join(save_path, "model_" + str(num_save) + ".pth"),
             )
-            num_save+=1
+            num_save += 1
             print(">> SAVED model at {:02d}".format(epoch))
-            print("lr : {:03f} batch size : {:d} num epoch : {d}".format(args.lr,args.batch_size,args.num_epochs))
-        #print("max model : {}, max score : {:.4f}\n".format(, best_score))
+            print(
+                "lr : {:03f} batch size : {:d} num epoch : {d}".format(
+                    args.lr, args.batch_size, args.num_epochs
+                )
+            )
+        # print("max model : {}, max score : {:.4f}\n".format(, best_score))
     wandb.finish()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--val_ratio", type=float, default=0.3) # train-val slit ratio
-    #parser.add_argument("--num_epochs", type=int, default=50) 
+    parser.add_argument("--val_ratio", type=float, default=0.3)  # train-val slit ratio
+    # parser.add_argument("--num_epochs", type=int, default=50)
 
-    #parser.add_argument("--lr", type=float, default=0.01) 
-    parser.add_argument("--weight_decay", type=float, default=1e-4) 
-    #parser.add_argument("--batch_size", type=int, default=64) 
+    # parser.add_argument("--lr", type=float, default=0.01)
+    parser.add_argument("--weight_decay", type=float, default=1e-4)
+    # parser.add_argument("--batch_size", type=int, default=64)
 
     # parser.add_argument("--in_size", type=int, default=224) # input size image
-    parser.add_argument("--n_workers", type=int, default=4) 
+    parser.add_argument("--n_workers", type=int, default=4)
 
     # parser.add_argument("--print_iter", type=int, default=10)
     # parser.add_argument("--num_classes", type=int, default=100)
@@ -124,23 +141,22 @@ if __name__ == "__main__":
     parser.add_argument("--backbone_name", type=str, default="resnet50")
     global_args = parser.parse_args()
 
-    save_path = os.path.join(global_args.save_dir,global_args.project_name,global_args.experiment_name)
+    save_path = os.path.join(
+        global_args.save_dir, global_args.project_name, global_args.experiment_name
+    )
     os.makedirs(save_path, exist_ok=False)
-    
+
     sweep_configuration = {
-        'method': 'random',
-        'name': 'sweep',
-        'metric': {
-            'goal': 'minimize', 
-            'name': 'val_loss'
-            },
-        'parameters': {
-            'batch_size': {'values': [32, 64, 128]},
-            'num_epochs': {'values': [5, 10, 15]},
-            'lr': {'max': 0.1, 'min': 0.0001}
-        }
+        "method": "random",
+        "name": "sweep",
+        "metric": {"goal": "minimize", "name": "val_loss"},
+        "parameters": {
+            "batch_size": {"values": [32, 64, 128]},
+            "num_epochs": {"values": [5, 10, 15]},
+            "lr": {"max": 0.1, "min": 0.0001},
+        },
     }
-    
-    best_score,num_save = 0,0
-    sweep_id = wandb.sweep(sweep=sweep_configuration, project='my-first-sweep')
-    wandb.agent(sweep_id, function=main, count=4) # count : 실행 횟수
+
+    best_score, num_save = 0, 0
+    sweep_id = wandb.sweep(sweep=sweep_configuration, project="my-first-sweep")
+    wandb.agent(sweep_id, function=main, count=4)  # count : 실행 횟수

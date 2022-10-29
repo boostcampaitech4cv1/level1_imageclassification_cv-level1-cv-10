@@ -62,7 +62,7 @@ def build_transform(args=None, phase="train"):
     if phase == "train":
         train_transform = transforms.Compose(
             [
-                #transforms.RandomResizedCrop(size=256, scale=(0.2, 1.0)),
+                # transforms.RandomResizedCrop(size=256, scale=(0.2, 1.0)),
                 transforms.CenterCrop(256),
                 transforms.RandomHorizontalFlip(),
                 # transforms.RandomRotation(degrees=(10,10)),
@@ -83,8 +83,20 @@ def build_transform(args=None, phase="train"):
     else:
         ### TTA 추가 가능 ###
         test_transform = transforms.Compose(
-            [transforms.CenterCrop(256), transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)]
+            [
+                transforms.CenterCrop(256),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std),
+            ]
         )
         return test_transform
 
 
+def make_class(gen_pred, age_pred, mask_pred, age_regression=False):
+    gen = gen_pred.argmax(dim=1)
+    mask = mask_pred.argmax(dim=1)
+    if age_regression:
+        pass
+    else:
+        age = age_pred.argmax(dim=1)
+    return 6 * mask + 3 * gen + age

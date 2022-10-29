@@ -38,12 +38,13 @@ class CustomDataset(Dataset):  # for train and validation
             image = self.transform(image)
         return image, torch.tensor(label)
 
+
 class MulitaskDataset(Dataset):  # for train and validation
     def __init__(self, root, data, transform=None):
         self.root = os.path.join(root, "images")
         self.data = data
         self.transform = transform
-        self.to_tensor = lambda x : torch.tensor(int(x))
+        self.to_tensor = lambda x: torch.tensor(int(x))
 
     def __len__(self):
         return len(self.data)
@@ -51,7 +52,9 @@ class MulitaskDataset(Dataset):  # for train and validation
     def __getitem__(self, idx):
         id, gen, age, age_category, mask, label, img_path = self.data[idx]
         ### 실제 데이터 다 넘김 ###
-        gen, age, age_category, mask, label = map(self.to_tensor,(gen,age,age_category,mask,label))
+        gen, age, age_category, mask, label = map(
+            self.to_tensor, (gen, age, age_category, mask, label)
+        )
         path = os.path.join(self.root, img_path)
         image = Image.open(path)
         if self.transform:
