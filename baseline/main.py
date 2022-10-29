@@ -17,15 +17,13 @@ from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
 
 from utils import *
 from metric import accuracy, macro_f1
-from dataset import CustomDataset
+from dataset import MulitaskDataset
 from model import CustomModel
 from process import train, validation
 
-
+from loss import create_criterion
 """
 TODO
-loss viz (tensorboard or wandb)
-write log
 hyperparameter tunning tool (ray tune or optuna or )
 TTA
 data preprocess (ex. background subtraction)
@@ -49,9 +47,9 @@ if __name__ == "__main__":
     # parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument("--train_dir", type=str, default="/opt/ml/input/data/train") 
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/") 
+    parser.add_argument("--backbone_name", type=str, default="resnet50") 
     parser.add_argument("--project_name", type=str, default="baseline") 
     parser.add_argument("--experiment_name", type=str, default="centercrop_test") 
-    parser.add_argument("--backbone_name", type=str, default="resnet50") 
     args = parser.parse_args()
 
     wandb.init(project=args.project_name, name=args.experiment_name,entity="cv-10")
@@ -72,8 +70,8 @@ if __name__ == "__main__":
 
     train_transform, val_transform = build_transform(args=args, phase="train") # data augmentation
 
-    train_dataset = CustomDataset(args.train_dir, train_data, transform=train_transform) 
-    val_dataset = CustomDataset(args.train_dir, val_data, transform=val_transform) 
+    train_dataset = MulitaskDataset(args.train_dir, train_data, transform=train_transform) 
+    val_dataset = MulitaskDataset(args.train_dir, val_data, transform=val_transform) 
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
@@ -92,7 +90,7 @@ if __name__ == "__main__":
     #scheduler = StepLR(optimizer, step_size=10, gamma=0.1) 
     scheduler = CosineAnnealingLR(optimizer, T_max=10)
 
-    loss_fn = nn.CrossEntropyLoss().cuda()
+    loss_fn = {'age':create_criterion('CE').cuda(),'mask':create_criterion('CE').cuda(),'gen':create_criterion('CE').cuda()}
 
     best_epoch, best_score = 0, 0
     for epoch in range(1,args.num_epochs+1):

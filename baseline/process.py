@@ -15,11 +15,16 @@ from metric import accuracy, macro_f1
 def train(args, epoch, model, loader, optimizer, scheduler, loss_fn):
     preds, labels = torch.tensor([]), torch.tensor([])
     total_loss, time = 0, datetime.now()
-    #for img, label in tqdm(loader):
-    for img, label in loader:
-        img, label = img.cuda(), label.cuda()
-        logit = model(img)
-        loss = loss_fn(logit, label)
+    model.train()
+    for img, label, gen, age, age_category, mask in loader:
+        img, label, gen, age, age_category, mask = img.cuda(), label.cuda(), gen.cuda(), age.cuda(), age_category.cuda(), mask.cuda()
+        gen_pred,age_pred,mask_pred = model(img)
+
+        gen_loss = loss_fn['gen'](gen_pred,gen)
+        age_loss = loss_fn['age'](age_pred,age_category)
+        mask_loss = loss_fn['mask'](mask_pred,mask)
+        loss = gen_loss + age_loss + mask_loss
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -35,7 +40,7 @@ def train(args, epoch, model, loader, optimizer, scheduler, loss_fn):
     avg_loss = total_loss/len(loader)
     print(
         "[train] loss {:.3f} | f1 {:.3f} | acc {:.3f} | elapsed {}".format(
-            total_loss / len(loader), f1, acc, elapsed
+            avg_loss, f1, acc, elapsed
         )
     )
     wandb.log({"epoch":epoch,"train_loss":avg_loss,"train_f1":f1,"train_acc":acc})

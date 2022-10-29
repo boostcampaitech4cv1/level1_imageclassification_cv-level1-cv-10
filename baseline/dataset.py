@@ -38,6 +38,26 @@ class CustomDataset(Dataset):  # for train and validation
             image = self.transform(image)
         return image, torch.tensor(label)
 
+class MulitaskDataset(Dataset):  # for train and validation
+    def __init__(self, root, data, transform=None):
+        self.root = os.path.join(root, "images")
+        self.data = data
+        self.transform = transform
+        self.to_tensor = lambda x : torch.tensor(int(x))
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        id, gen, age, age_category, mask, label, img_path = self.data[idx]
+        ### 실제 데이터 다 넘김 ###
+        gen, age, age_category, mask, label = map(self.to_tensor,(gen,age,age_category,mask,label))
+        path = os.path.join(self.root, img_path)
+        image = Image.open(path)
+        if self.transform:
+            image = self.transform(image)
+        return image, label, gen, age, age_category, mask
+
 
 class TestDataset(Dataset):  # for test
     def __init__(self, root, img_paths, transform=None):
@@ -81,12 +101,12 @@ if __name__ == "__main__":
     train_data, val_data = train_test_split(
         data, test_size=val_ratio, shuffle=True, random_state=seed
     )
-    train_dataset = CustomDataset(train_dir, train_data, transform=transform)
+    train_dataset = MulitaskDataset(train_dir, train_data, transform=transform)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    for img, label in train_loader:
-        print(img.shape, label)
+    for img, label, gen, age, age_category, mask in train_loader:
+        print(img.shape, label.shape, gen.shape, age.shape)
         break
 
-    tmp = iter(train_dataset)
-    img, label = next(tmp)
+    # tmp = iter(train_dataset)
+    # img, label = next(tmp)
