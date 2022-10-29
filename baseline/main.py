@@ -2,6 +2,8 @@ import os
 import argparse
 import random
 from datetime import datetime
+from datetime import datetime
+from pytz import timezone
 
 import wandb
 from tqdm import tqdm
@@ -38,7 +40,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--weight_decay", type=float, default=1e-4)
-    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--batch_size", type=int, default=128)
 
     # parser.add_argument("--in_size", type=int, default=224) # input size image
     # parser.add_argument("--n_workers", type=int, default=4)
@@ -50,15 +52,15 @@ if __name__ == "__main__":
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/")
     parser.add_argument("--backbone_name", type=str, default="resnet50")
     parser.add_argument("--project_name", type=str, default="multitask")
-    parser.add_argument("--experiment_name", type=str, default="tmp")
+    parser.add_argument("--experiment_name", type=str, default="age classification")
     args = parser.parse_args()
 
     wandb.init(project=args.project_name, name=args.experiment_name, entity="cv-10")
     wandb.config.update(args)
 
     set_seed(args.seed)
-
-    save_path = os.path.join(args.save_dir, args.project_name, args.experiment_name)
+    
+    save_path = os.path.join(args.save_dir, args.project_name, args.experiment_name)+datetime.now(timezone('Asia/Seoul')).strftime("(%m.%d %H:%M)")
 
     os.makedirs(save_path, exist_ok=False)
 
@@ -92,8 +94,8 @@ if __name__ == "__main__":
     #     [param for param in model.parameters() if param.requires_grad],
     #     lr=base_lr, weight_decay=1e-4, momentum=0.9)
 
-    # scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
-    scheduler = CosineAnnealingLR(optimizer, T_max=10)
+    scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
+    #scheduler = CosineAnnealingLR(optimizer, T_max=10)
 
     loss_fn = MultitaskLoss(args).cuda()
 
