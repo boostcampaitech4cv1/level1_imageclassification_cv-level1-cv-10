@@ -13,9 +13,9 @@ from utils import *
 from metric import accuracy, macro_f1
 
 def train(args, epoch, model, loader, optimizer, scheduler, loss_fn):
+    model.train()
     preds, labels = torch.tensor([]), torch.tensor([])
     total_loss, time = 0, datetime.now()
-    #for img, label in tqdm(loader):
     for img, label in loader:
         img, label = img.cuda(), label.cuda()
         logit = model(img)
@@ -46,7 +46,6 @@ def validation(args, epoch, model, loader, loss_fn):
     preds, labels = torch.tensor([]), torch.tensor([])
     total_loss, time = 0, datetime.now()
     with torch.no_grad():
-        #for img, label in tqdm(loader):
         for img, label in loader:
             img, label = img.cuda(), label.cuda()
             logit = model(img)
