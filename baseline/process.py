@@ -52,7 +52,7 @@ def train(args, epoch, model, loader, optimizer, scheduler, loss_fn):
     info["train_f1"] = macro_f1(labels, preds)
     info["train_acc"] = accuracy(labels, preds)
     info["train_elapsed"] = str(datetime.now() - time)
-    info["train_epoch"] = epoch
+    info["epoch"] = epoch
 
     print("[train]", info)
     wandb.log(info)
