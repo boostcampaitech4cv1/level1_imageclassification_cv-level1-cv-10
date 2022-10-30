@@ -25,12 +25,15 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
 
 
-def csv_preprocess(root, csv_file):
-    data = []
+def csv_preprocess(csv_file):
     csv_file["gender"] = (csv_file["gender"] == "female").astype("int")
     csv_file["age_category"] = csv_file["age"].apply(
         lambda x: 0 if x < 30 else (1 if x < 60 else 2)
     )
+    return csv_file
+
+def increment_path(root, csv_file):
+    data = []
     for _, id, gen, _, age, path, age_category in csv_file.itertuples():
         for img_name in os.listdir(os.path.join(root, path)):
             if img_name[0] != ".":

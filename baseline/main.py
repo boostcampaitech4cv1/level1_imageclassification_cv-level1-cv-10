@@ -36,16 +36,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--val_ratio", type=float, default=0.3)  # train-val slit ratio
-    parser.add_argument("--stratify", type=bool, default=False)
+    parser.add_argument("--split_option", type=str, default="different")
+    parser.add_argument("--stratify", type=bool, default=True)
+    parser.add_argument("--age_pred", type=str, default="ordinary")
 
+    # parser.add_argument("--in_size", type=int, default=224) # input size image
     parser.add_argument("--num_epochs", type=int, default=50)
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument('--dropout', type=float, default=0.2)
-
-    # parser.add_argument("--in_size", type=int, default=224) # input size image
-    # parser.add_argument("--n_workers", type=int, default=4)
+    parser.add_argument("--n_workers", type=int, default=4)
 
     # parser.add_argument("--print_iter", type=int, default=10)
     # parser.add_argument("--num_classes", type=int, default=100)
@@ -53,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/")
     parser.add_argument("--backbone_name", type=str, default="resnet50")
     parser.add_argument("--project_name", type=str, default="multitask")
-    parser.add_argument("--experiment_name", type=str, default="age classification - stratify")
+    parser.add_argument("--experiment_name", type=str, default="age classification - different train val split")
 
     args = parser.parse_args()
 
@@ -66,21 +67,31 @@ if __name__ == "__main__":
 
     os.makedirs(save_path, exist_ok=False)
 
-    train_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
-    data = csv_preprocess(os.path.join(args.train_dir, "images"), train_csv)
-
-    if args.stratify:
-        train_data, val_data = train_test_split(
-            data, test_size=args.val_ratio, shuffle=True, random_state=args.seed, stratify = data[:,3] ## age_class stratify
+    if args.split_option == "different":
+        all_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
+        all_csv = csv_preprocess(all_csv)
+        
+        train_csv, val_csv = train_test_split(
+                all_csv, test_size=args.val_ratio, shuffle=True, random_state=args.seed, stratify=all_csv['age_category'] ## no stratify
         )
+        train_data = increment_path(os.path.join(args.train_dir, "images"), train_csv)
+        val_data  = increment_path(os.path.join(args.train_dir, "images"), val_csv)
     else:
-        train_data, val_data = train_test_split(
-            data, test_size=args.val_ratio, shuffle=True, random_state=args.seed ## no stratify
-        )
+        train_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
+        train_csv = csv_preprocess(train_csv)
+        data = increment_path(os.path.join(args.train_dir, "images"), train_csv)
 
-    train_data, val_data = train_test_split(
-        data, test_size=args.val_ratio, shuffle=True, random_state=args.seed, stratify = data[:,3] ## age_class stratify
-    )
+        if args.stratify:
+            train_data, val_data = train_test_split(
+                data, test_size=args.val_ratio, shuffle=True, random_state=args.seed, stratify = data[:,3] ## age_class stratify
+            )
+        else:
+            train_data, val_data = train_test_split(
+                data, test_size=args.val_ratio, shuffle=True, random_state=args.seed ## no stratify
+            )
+        
+    
+
     train_transform, val_transform = build_transform(
         args=args, phase="train"
     )  # data augmentation
@@ -91,8 +102,8 @@ if __name__ == "__main__":
         args.train_dir, val_data, transform=val_transform
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.n_workers)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.n_workers)
 
     model = MultitaskModel(args).cuda()
 
