@@ -89,24 +89,32 @@ def validation(args, epoch, model, loader, loss_fn):
             loss = gen_loss + age_loss + mask_loss
             pred = make_class(gen_pred, age_pred, mask_pred)
 
-            gen_pred = gen_pred.argmax(dim=1)
-            age_pred = age_pred.argmax(dim=1)
-            mask_pred = mask_pred.argmax(dim=1)
-            info["val_gen_acc"] += (gen_pred == gen).sum().item()
-            info["val_age_acc"] += (age_pred == age_category).sum().item()
-            info["val_mask_acc"] += (mask_pred == mask).sum().item()
-            num+=label.size(0)
+            # gen_pred = gen_pred.argmax(dim=1)
+            # age_pred = age_pred.argmax(dim=1)
+            # mask_pred = mask_pred.argmax(dim=1)
+            # info["val_gen_acc"] += (gen_pred == gen).sum().item()
+            # info["val_age_acc"] += (age_pred == age_category).sum().item()
+            # info["val_mask_acc"] += (mask_pred == mask).sum().item()
+            # num+=label.size(0)
 
             preds = torch.cat((preds, pred.cpu()))
             labels = torch.cat((labels, label.cpu()))
             info["val_total_loss"] += loss.item() / len(loader)
 
+    f1_all = macro_f1(labels, preds,return_all=True)
+    info["val_f1"] = sum(f1_all)/len(f1_all)
+    info["val_gen_f1"] = macro_f1((labels//3)%2, (preds//3)%2)
+    age_f1_all = macro_f1(labels%3, preds%3,return_all=True)
+    info["val_age_f1"] = sum(age_f1_all)/len(age_f1_all)
+    info["val_age_f1_0"],info["val_age_f1_1"],info["val_age_f1_2"] = age_f1_all
+
+    info["val_mask_f1"] = macro_f1(labels//6, preds//6)
+
     info["epoch"] = epoch
-    info["val_f1"] = macro_f1(labels, preds)
     info["val_acc"] = accuracy(labels, preds)
-    info["val_gen_acc"] = info["val_gen_acc"] / num
-    info["val_age_acc"] = info["val_age_acc"] / num
-    info["val_mask_acc"] = info["val_mask_acc"] / num
+    # info["val_gen_acc"] = info["val_gen_acc"] / num
+    # info["val_age_acc"] = info["val_age_acc"] / num
+    # info["val_mask_acc"] = info["val_mask_acc"] / num
     elapsed = datetime.now() - time
 
     print(
@@ -114,10 +122,21 @@ def validation(args, epoch, model, loader, loss_fn):
              info["val_f1"], info["val_acc"], info["val_total_loss"], elapsed
         )
     )
+    # print(
+    #     "[val] gen acc {:.3f} | age acc {:.3f} | mask acc {:.3f} ".format(
+    #         info["val_gen_acc"], info["val_age_acc"], info["val_mask_acc"]
+    #     )
+    # )
     print(
-        "[val] gen acc {:.3f} | age acc {:.3f} | mask acc {:.3f} ".format(
-            info["val_gen_acc"], info["val_age_acc"], info["val_mask_acc"]
+        "[val] gen f1 {:.3f} | age f1 {:.3f} | mask f1 {:.3f} ".format(
+            info["val_gen_f1"], info["val_age_f1"], info["val_mask_f1"]
         )
     )
+    print(
+        "[val] age=0 f1 {:.3f} | age=1 f1 {:.3f} | age=2 f1 {:.3f} ".format(
+            info["val_age_f1_0"], info["val_age_f1_1"], info["val_age_f1_2"]
+        )
+    )
+    print("[val] 5 smallest f1",dict(sorted([(i,round(f1_all[i],3)) for i in range(len(f1_all))],key=lambda x:x[1])[:5]))
     wandb.log(info)
     return info["val_f1"]

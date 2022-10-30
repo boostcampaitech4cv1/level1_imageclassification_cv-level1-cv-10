@@ -26,7 +26,7 @@ data preprocess (ex. background subtraction)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--in_size", type=int, default=224)
     parser.add_argument("--n_workers", type=int, default=4)
 
@@ -36,9 +36,9 @@ if __name__ == "__main__":
     parser.add_argument("--test_dir", type=str, default="/opt/ml/input/data/eval")
 
     parser.add_argument(
-        "--save_dir", type=str, default="/opt/ml/experiment/multitask/age classification(10.29 15:29)"
+        "--save_dir", type=str, default="/opt/ml/experiment/multitask/age classification - stratify(10.30 12:52)"
     )
-    parser.add_argument("--target_model", type=str, default="model_11.pth")
+    parser.add_argument("--target_model", type=str, default="model_28.pth")
     args = parser.parse_args()
 
     submission = pd.read_csv(os.path.join(args.test_dir, "info.csv"))

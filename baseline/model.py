@@ -29,27 +29,28 @@ class CustomModel(nn.Module):
 class MultitaskHead(nn.Module):
     def __init__(self, args,in_features, embed_dim):
         super(MultitaskHead, self).__init__()
-        self.gen_head = nn.Sequential(
-            nn.Linear(in_features=in_features, out_features=embed_dim),
-            nn.GELU(),
-            nn.Dropout(args.dropout),
-            nn.Linear(in_features=embed_dim, out_features=2),
-            )
-        self.age_head = nn.Sequential(
-            nn.Linear(in_features=in_features, out_features=embed_dim),
-            nn.GELU(),
-            nn.Dropout(args.dropout),
-            nn.Linear(in_features=embed_dim, out_features=3),
-            )
-        self.mask_head = nn.Sequential(
-            nn.Linear(in_features=in_features, out_features=embed_dim),
-            nn.GELU(),
-            nn.Dropout(args.dropout),
-            nn.Linear(in_features=embed_dim, out_features=3),
-            )
-        # self.gen_head = nn.Linear(in_features=in_features, out_features=2)
-        # self.age_head = nn.Linear(in_features=in_features, out_features=3)
-        # self.mask_head = nn.Linear(in_features=in_features, out_features=3)
+        # self.gen_head = nn.Sequential(
+        #     nn.Linear(in_features=in_features, out_features=embed_dim),
+        #     nn.GELU(),
+        #     nn.Dropout(args.dropout),
+        #     nn.Linear(in_features=embed_dim, out_features=2),
+        #     )
+        # self.age_head = nn.Sequential(
+        #     nn.Linear(in_features=in_features, out_features=embed_dim),
+        #     nn.GELU(),
+        #     nn.Dropout(args.dropout),
+        #     nn.Linear(in_features=embed_dim, out_features=3),
+        #     )
+        # self.mask_head = nn.Sequential(
+        #     nn.Linear(in_features=in_features, out_features=embed_dim),
+        #     nn.GELU(),
+        #     nn.Dropout(args.dropout),
+        #     nn.Linear(in_features=embed_dim, out_features=3),
+        #     )
+
+        self.gen_head = nn.Linear(in_features=in_features, out_features=2)
+        self.age_head = nn.Linear(in_features=in_features, out_features=3)
+        self.mask_head = nn.Linear(in_features=in_features, out_features=3)
 
     def forward(self, x):
         gen_pred = self.gen_head(x)

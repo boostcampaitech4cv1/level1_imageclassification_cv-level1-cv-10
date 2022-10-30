@@ -36,8 +36,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--val_ratio", type=float, default=0.3)  # train-val slit ratio
-    parser.add_argument("--num_epochs", type=int, default=50)
+    parser.add_argument("--stratify", type=bool, default=False)
 
+    parser.add_argument("--num_epochs", type=int, default=50)
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--batch_size", type=int, default=128)
@@ -52,7 +53,8 @@ if __name__ == "__main__":
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/")
     parser.add_argument("--backbone_name", type=str, default="resnet50")
     parser.add_argument("--project_name", type=str, default="multitask")
-    parser.add_argument("--experiment_name", type=str, default="age classification no dropout")
+    parser.add_argument("--experiment_name", type=str, default="age classification - stratify")
+
     args = parser.parse_args()
 
     wandb.init(project=args.project_name, name=args.experiment_name, entity="cv-10")
@@ -67,8 +69,17 @@ if __name__ == "__main__":
     train_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
     data = csv_preprocess(os.path.join(args.train_dir, "images"), train_csv)
 
+    if args.stratify:
+        train_data, val_data = train_test_split(
+            data, test_size=args.val_ratio, shuffle=True, random_state=args.seed, stratify = data[:,3] ## age_class stratify
+        )
+    else:
+        train_data, val_data = train_test_split(
+            data, test_size=args.val_ratio, shuffle=True, random_state=args.seed ## no stratify
+        )
+
     train_data, val_data = train_test_split(
-        data, test_size=args.val_ratio, shuffle=True, random_state=args.seed
+        data, test_size=args.val_ratio, shuffle=True, random_state=args.seed, stratify = data[:,3] ## age_class stratify
     )
     train_transform, val_transform = build_transform(
         args=args, phase="train"
@@ -129,6 +140,6 @@ if __name__ == "__main__":
                 {"model": model.state_dict()},
                 os.path.join(save_path, "model_" + str(epoch) + ".pth"),
             )
-            print(">> SAVED model at {:02d}".format(epoch))
-        print("max epoch: {}, max score : {:.4f}\n".format(best_epoch, best_score))
+            print(">>>>>> SAVED model at {:02d}".format(epoch))
+        print("[best] epoch: {}, score : {:.4f}\n".format(best_epoch, best_score))
     wandb.finish()
