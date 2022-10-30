@@ -41,18 +41,18 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument('--dropout', type=float, default=0.2)
 
     # parser.add_argument("--in_size", type=int, default=224) # input size image
     # parser.add_argument("--n_workers", type=int, default=4)
 
     # parser.add_argument("--print_iter", type=int, default=10)
     # parser.add_argument("--num_classes", type=int, default=100)
-    # parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument("--train_dir", type=str, default="/opt/ml/input/data/train")
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/")
     parser.add_argument("--backbone_name", type=str, default="resnet50")
     parser.add_argument("--project_name", type=str, default="multitask")
-    parser.add_argument("--experiment_name", type=str, default="age classification")
+    parser.add_argument("--experiment_name", type=str, default="age classification no dropout")
     args = parser.parse_args()
 
     wandb.init(project=args.project_name, name=args.experiment_name, entity="cv-10")

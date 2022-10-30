@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 
 from utils import *
 from dataset import TestDataset
-from model import CustomModel
+from model import CustomModel, MultitaskModel
 
 """
 TODO
@@ -36,9 +36,9 @@ if __name__ == "__main__":
     parser.add_argument("--test_dir", type=str, default="/opt/ml/input/data/eval")
 
     parser.add_argument(
-        "--save_dir", type=str, default="/opt/ml/experiment/baseline/centercrop_test"
+        "--save_dir", type=str, default="/opt/ml/experiment/multitask/age classification(10.29 15:29)"
     )
-    parser.add_argument("--target_model", type=str, default="model_50.pth")
+    parser.add_argument("--target_model", type=str, default="model_11.pth")
     args = parser.parse_args()
 
     submission = pd.read_csv(os.path.join(args.test_dir, "info.csv"))
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     )
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
-    model = CustomModel(args).cuda()
+    model = MultitaskModel(args).cuda()
 
     ### load model ###
     ckpt = torch.load(os.path.join(args.save_dir, args.target_model))
@@ -62,8 +62,8 @@ if __name__ == "__main__":
     with torch.no_grad():
         for img in tqdm(test_loader):
             img = img.cuda()
-            logit = model(img)
-            pred = logit.argmax(dim=-1)
+            gen_pred, age_pred, mask_pred = model(img)
+            pred = make_class(gen_pred, age_pred, mask_pred)
             all_predictions.extend(pred.cpu().numpy())
     submission["ans"] = all_predictions
     submission.to_csv(
