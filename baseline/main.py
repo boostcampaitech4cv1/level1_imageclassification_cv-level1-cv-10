@@ -29,18 +29,20 @@ from loss import MultitaskLoss, create_criterion
 TODO
 hyperparameter tunning tool (ray tune or optuna or )
 TTA
-data preprocess (ex. background subtraction)
+data preprocess or augmentation (ex. background subtraction)
+backbone test
+psuedo label
 """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--val_ratio", type=float, default=0.3)  # train-val slit ratio
-    parser.add_argument("--split_option", type=str, default="None")  # different
+    parser.add_argument("--split_option", type=str, default="different")  # different or none
     parser.add_argument("--stratify", type=bool, default=False)
     parser.add_argument("--wrs", type=bool, default=True)
 
-    parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary
+    parser.add_argument("--age_pred", type=str, default="regression") # classification or regression or ordinary
     parser.add_argument("--age_normalized", type=str, default="normal") # normal or minmax
 
     # parser.add_argument("--in_size", type=int, default=224) # input size image
@@ -72,29 +74,25 @@ if __name__ == "__main__":
     wandb.config.update(args)
     os.makedirs(save_path, exist_ok=False)
 
-    if args.split_option == "different":
-        all_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
-        all_csv = csv_preprocess(all_csv)
-        train_csv, val_csv = train_test_split(
-            all_csv,
-            test_size=args.val_ratio,
-            shuffle=True,
-            random_state=args.seed,
-            stratify=all_csv["age_category"],
-        )
-        if args.age_pred == 'regression':
-            if args.age_normalized == 'normal':
-                Statistic = namedtuple('Statistic', ['mean', 'std'])
-                age_stat = Statistic(mean=train_csv['age'].mean(),std=train_csv['age'].std())
-                train_csv['age'] = (train_csv['age']-age_stat.mean)/age_stat.std
-            elif args.age_normalized == 'minmax':
-                Statistic = namedtuple('Statistic', ['min', 'max'])
-                pass
-        train_data = increment_path(os.path.join(args.train_dir, "images"), train_csv)
-        val_data = increment_path(os.path.join(args.train_dir, "images"), val_csv)
+    all_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
+    all_csv = csv_preprocess(all_csv)
+    if args.split_option == "different":        
+        if args.stratify:
+            train_csv, val_csv = train_test_split(
+                all_csv,
+                test_size=args.val_ratio,
+                shuffle=True,
+                random_state=args.seed,
+                stratify=all_csv["age_category"],  # age_class stratify
+            )
+        else:
+            train_csv, val_csv = train_test_split(
+                all_csv,
+                test_size=args.val_ratio,
+                shuffle=True,
+                random_state=args.seed,  # no stratify
+            )
     else:
-        all_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
-        all_csv = csv_preprocess(all_csv)
         data = increment_path(os.path.join(args.train_dir, "images"), all_csv)
         if args.stratify:
             train_data, val_data = train_test_split(
@@ -111,6 +109,25 @@ if __name__ == "__main__":
                 shuffle=True,
                 random_state=args.seed,  ## no stratify
             )
+
+    ### age preprocess ###
+    if args.age_pred == 'regression':
+        if args.age_normalized == 'normal':
+            Statistic = namedtuple('Statistic', ['mean', 'std'])
+            tmp = train_data[:,2].astype(np.float)
+            age_stat = Statistic(mean=tmp.mean(),std=tmp.std())
+            train_data[:,2] = (tmp-age_stat.mean)/age_stat.std
+
+            tmp = val_data[:,2].astype(np.float)
+            val_data[:,2] = (tmp[:,2]-age_stat.mean)/age_stat.std
+        elif args.age_normalized == 'minmax':
+            Statistic = namedtuple('Statistic', ['min', 'max'])
+            tmp = train_data[:,2].astype(np.float)
+            age_stat = Statistic(min=tmp.min(),max=tmp.max())
+            train_data[:,2] = (tmp-age_stat.min)/(age_stat.max -age_stat.min)
+
+            tmp = val_data[:,2].astype(np.float)
+            val_data[:,2] = (tmp-age_stat.min)/(age_stat.max -age_stat.min)
 
     train_transform, val_transform = build_transform(
         args=args, phase="train"
