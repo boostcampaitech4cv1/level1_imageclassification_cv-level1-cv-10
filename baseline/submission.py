@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 
 from utils import *
 from dataset import TestDataset
-from model import CustomModel
+from model import CustomModel, MultitaskModel
 
 """
 TODO
@@ -26,17 +26,27 @@ data preprocess (ex. background subtraction)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--in_size", type=int, default=224)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary
+
+    # parser.add_argument("--in_size", type=int, default=224) # input size image
+    parser.add_argument("--num_epochs", type=int, default=50)
+    parser.add_argument("--lr", type=float, default=0.01)
+    parser.add_argument("--weight_decay", type=float, default=1e-4)
+    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--n_workers", type=int, default=4)
 
     # parser.add_argument("--num_classes", type=int, default=100)
     parser.add_argument("--backbone_name", type=str, default="resnet50")
-    parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--test_dir", type=str, default="/opt/ml/input/data/eval")
-    
-    parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/baseline/centercrop_test") 
-    parser.add_argument("--target_model", type=str, default="model_50.pth")
+
+    parser.add_argument(
+        "--save_dir",
+        type=str,
+        default="/opt/ml/experiment/multitask/classification - wrs&original dataset(10.31 15:03)",
+    )
+    parser.add_argument("--target_model", type=str, default="model_27.pth")
     args = parser.parse_args()
 
     submission = pd.read_csv(os.path.join(args.test_dir, "info.csv"))
@@ -48,10 +58,10 @@ if __name__ == "__main__":
     )
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
-    model = CustomModel(args).cuda()
+    model = MultitaskModel(args).cuda()
 
     ### load model ###
-    ckpt = torch.load(os.path.join(args.save_dir,args.target_model))
+    ckpt = torch.load(os.path.join(args.save_dir, args.target_model))
     model.load_state_dict(ckpt["model"])
     print("LOADED model")
     ### test ###
@@ -60,9 +70,12 @@ if __name__ == "__main__":
     with torch.no_grad():
         for img in tqdm(test_loader):
             img = img.cuda()
-            logit = model(img)
-            pred = logit.argmax(dim=-1)
+            gen_pred, age_pred, mask_pred = model(img)
+            pred = make_class(args, gen_pred, age_pred, mask_pred)
             all_predictions.extend(pred.cpu().numpy())
     submission["ans"] = all_predictions
-    submission.to_csv(os.path.join(args.save_dir, args.target_model.split('.')[0]+".csv"), index=False)
+    submission.to_csv(
+        os.path.join(args.save_dir, args.target_model.split(".")[0] + ".csv"),
+        index=False,
+    )
     print("test inference is done!")
