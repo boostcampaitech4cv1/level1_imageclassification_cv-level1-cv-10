@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from torch.optim import Adam, SGD
 from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
 
@@ -38,10 +38,10 @@ if __name__ == "__main__":
     parser.add_argument("--val_ratio", type=float, default=0.3)  # train-val slit ratio
     parser.add_argument("--split_option", type=str, default="different") 
     parser.add_argument("--stratify", type=bool, default=True)
+    parser.add_argument("--wrs", type=bool, default=True)
 
-    parser.add_argument("--age_pred", type=str, default="regression") # classification or regression or ordinary
+    parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary
     parser.add_argument("--age_normalized", type=str, default="normal") # normal or minmax
-
 
     # parser.add_argument("--in_size", type=int, default=224) # input size image
     parser.add_argument("--num_epochs", type=int, default=50)
@@ -51,8 +51,6 @@ if __name__ == "__main__":
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--n_workers", type=int, default=4)
 
-    # parser.add_argument("--print_iter", type=int, default=10)
-    # parser.add_argument("--num_classes", type=int, default=100)
     parser.add_argument("--train_dir", type=str, default="/opt/ml/input/data/train")
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/")
     parser.add_argument("--backbone_name", type=str, default="resnet50")
@@ -60,7 +58,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--experiment_name",
         type=str,
-        default="age regression - noraml&no activation",
+        default="classification - wrs",
     )
     args = parser.parse_args()
     age_stat = None
@@ -73,6 +71,8 @@ if __name__ == "__main__":
     wandb.init(project=args.project_name, name=args.experiment_name, entity="cv-10")
     wandb.config.update(args)
     os.makedirs(save_path, exist_ok=False)
+
+
 
     if args.split_option == "different":
         all_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
@@ -122,12 +122,22 @@ if __name__ == "__main__":
     )
     val_dataset = MulitaskDataset(args.train_dir, val_data, transform=val_transform)
 
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=args.n_workers,
-    )
+    if args.wrs:
+        print("WeightedRandomSampler")
+        target = [train_dataset[i][4] for i in range(len(train_dataset))] # target : age category 
+        class_sample_count = np.array([len(np.where(target == t)[0]) for t in np.unique(target)])
+        weight = 1. / class_sample_count
+        samples_weight = np.array([weight[t] for t in target])
+        samples_weight = torch.from_numpy(samples_weight)
+        sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight))
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.n_workers)
+    else:
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.n_workers,
+        )
     val_loader = DataLoader(
         val_dataset,
         batch_size=args.batch_size,
@@ -136,6 +146,7 @@ if __name__ == "__main__":
     )
 
     model = MultitaskModel(args).cuda()
+    loss_fn = MultitaskLoss(args).cuda()
 
     optimizer = Adam(
         [param for param in model.parameters() if param.requires_grad],
@@ -149,7 +160,6 @@ if __name__ == "__main__":
     scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
     # scheduler = CosineAnnealingLR(optimizer, T_max=10)
 
-    loss_fn = MultitaskLoss(args).cuda()
 
     best_epoch, best_score = 0, 0
     for epoch in range(1, args.num_epochs + 1):
