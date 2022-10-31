@@ -27,8 +27,9 @@ class CustomModel(nn.Module):
 
 
 class MultitaskHead(nn.Module):
-    def __init__(self, args,in_features, embed_dim):
+    def __init__(self, args, in_features, embed_dim):
         super(MultitaskHead, self).__init__()
+
         # self.gen_head = nn.Sequential(
         #     nn.Linear(in_features=in_features, out_features=embed_dim),
         #     nn.GELU(),
@@ -49,8 +50,19 @@ class MultitaskHead(nn.Module):
         #     )
 
         self.gen_head = nn.Linear(in_features=in_features, out_features=2)
-        self.age_head = nn.Linear(in_features=in_features, out_features=3)
         self.mask_head = nn.Linear(in_features=in_features, out_features=3)
+
+        if args.age_pred == 'classification':
+            self.age_head = nn.Linear(in_features=in_features, out_features=3)
+        elif args.age_pred == 'regression':
+            self.age_head = nn.Linear(in_features=in_features, out_features=1)
+            # self.age_head = nn.Sequential(
+            #     nn.Linear(in_features=in_features, out_features=1),
+            #     nn.Sigmoid(), # sigmoid를 쓰면 logistic regression 인데 => binary classifcation에 가까워질거같은데?
+            # )
+        elif args.age_pred == 'ordinary':
+            self.age_head = nn.Linear(in_features=in_features, out_features=1)
+
 
     def forward(self, x):
         gen_pred = self.gen_head(x)
@@ -66,7 +78,7 @@ class MultitaskModel(nn.Module):
             self.backbone = timm.create_model(
                 "resnet50", pretrained=True, num_classes=0
             )
-            self.head = MultitaskHead(args,in_features=2048,embed_dim=128)
+            self.head = MultitaskHead(args, in_features=2048, embed_dim=128)
 
     def forward(self, x):
         x = self.backbone(x)

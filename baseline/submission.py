@@ -36,9 +36,11 @@ if __name__ == "__main__":
     parser.add_argument("--test_dir", type=str, default="/opt/ml/input/data/eval")
 
     parser.add_argument(
-        "--save_dir", type=str, default="/opt/ml/experiment/multitask/age classification - stratify(10.30 12:52)"
+        "--save_dir",
+        type=str,
+        default="/opt/ml/experiment/multitask/age classification - different train val split(10.31 00:06)",
     )
-    parser.add_argument("--target_model", type=str, default="model_28.pth")
+    parser.add_argument("--target_model", type=str, default="model_27.pth")
     args = parser.parse_args()
 
     submission = pd.read_csv(os.path.join(args.test_dir, "info.csv"))

@@ -1,7 +1,7 @@
+from collections import namedtuple
 import os
 import argparse
 import random
-from datetime import datetime
 from datetime import datetime
 from pytz import timezone
 
@@ -36,16 +36,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--val_ratio", type=float, default=0.3)  # train-val slit ratio
-    parser.add_argument("--split_option", type=str, default="different")
+    parser.add_argument("--split_option", type=str, default="different") 
     parser.add_argument("--stratify", type=bool, default=True)
-    parser.add_argument("--age_pred", type=str, default="ordinary")
+
+    parser.add_argument("--age_pred", type=str, default="regression") # classification or regression or ordinary
+    parser.add_argument("--age_normalized", type=str, default="normal") # normal or minmax
+
 
     # parser.add_argument("--in_size", type=int, default=224) # input size image
     parser.add_argument("--num_epochs", type=int, default=50)
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--batch_size", type=int, default=128)
-    parser.add_argument('--dropout', type=float, default=0.2)
+    parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--n_workers", type=int, default=4)
 
     # parser.add_argument("--print_iter", type=int, default=10)
@@ -54,43 +57,62 @@ if __name__ == "__main__":
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/")
     parser.add_argument("--backbone_name", type=str, default="resnet50")
     parser.add_argument("--project_name", type=str, default="multitask")
-    parser.add_argument("--experiment_name", type=str, default="age classification - different train val split")
-
+    parser.add_argument(
+        "--experiment_name",
+        type=str,
+        default="age regression - noraml&no activation",
+    )
     args = parser.parse_args()
-
-    wandb.init(project=args.project_name, name=args.experiment_name, entity="cv-10")
-    wandb.config.update(args)
+    age_stat = None
 
     set_seed(args.seed)
-    
-    save_path = os.path.join(args.save_dir, args.project_name, args.experiment_name)+datetime.now(timezone('Asia/Seoul')).strftime("(%m.%d %H:%M)")
 
+    save_path = os.path.join(
+        args.save_dir, args.project_name, args.experiment_name
+    ) + datetime.now(timezone("Asia/Seoul")).strftime("(%m.%d %H:%M)")
+    wandb.init(project=args.project_name, name=args.experiment_name, entity="cv-10")
+    wandb.config.update(args)
     os.makedirs(save_path, exist_ok=False)
 
     if args.split_option == "different":
         all_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
         all_csv = csv_preprocess(all_csv)
-        
         train_csv, val_csv = train_test_split(
-                all_csv, test_size=args.val_ratio, shuffle=True, random_state=args.seed, stratify=all_csv['age_category'] ## no stratify
+            all_csv,
+            test_size=args.val_ratio,
+            shuffle=True,
+            random_state=args.seed,
+            stratify=all_csv["age_category"],
         )
+        if args.age_pred == 'regression':
+            if args.age_normalized == 'normal':
+                Statistic = namedtuple('Statistic', ['mean', 'std'])
+                age_stat = Statistic(mean=train_csv['age'].mean(),std=train_csv['age'].std())
+                train_csv['age'] = (train_csv['age']-age_stat.mean)/age_stat.std
+            elif args.age_normalized == 'minmax':
+                Statistic = namedtuple('Statistic', ['min', 'max'])
+                pass
         train_data = increment_path(os.path.join(args.train_dir, "images"), train_csv)
-        val_data  = increment_path(os.path.join(args.train_dir, "images"), val_csv)
+        val_data = increment_path(os.path.join(args.train_dir, "images"), val_csv)
     else:
-        train_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
-        train_csv = csv_preprocess(train_csv)
-        data = increment_path(os.path.join(args.train_dir, "images"), train_csv)
-
+        all_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
+        all_csv = csv_preprocess(all_csv)
+        data = increment_path(os.path.join(args.train_dir, "images"), all_csv)
         if args.stratify:
             train_data, val_data = train_test_split(
-                data, test_size=args.val_ratio, shuffle=True, random_state=args.seed, stratify = data[:,3] ## age_class stratify
+                data,
+                test_size=args.val_ratio,
+                shuffle=True,
+                random_state=args.seed,
+                stratify=data[:, 3],  ## age_class stratify
             )
         else:
             train_data, val_data = train_test_split(
-                data, test_size=args.val_ratio, shuffle=True, random_state=args.seed ## no stratify
+                data,
+                test_size=args.val_ratio,
+                shuffle=True,
+                random_state=args.seed,  ## no stratify
             )
-        
-    
 
     train_transform, val_transform = build_transform(
         args=args, phase="train"
@@ -98,12 +120,20 @@ if __name__ == "__main__":
     train_dataset = MulitaskDataset(
         args.train_dir, train_data, transform=train_transform
     )
-    val_dataset = MulitaskDataset(
-        args.train_dir, val_data, transform=val_transform
-    )
+    val_dataset = MulitaskDataset(args.train_dir, val_data, transform=val_transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.n_workers)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.n_workers)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.n_workers,
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.n_workers,
+    )
 
     model = MultitaskModel(args).cuda()
 
@@ -117,7 +147,7 @@ if __name__ == "__main__":
     #     lr=base_lr, weight_decay=1e-4, momentum=0.9)
 
     scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
-    #scheduler = CosineAnnealingLR(optimizer, T_max=10)
+    # scheduler = CosineAnnealingLR(optimizer, T_max=10)
 
     loss_fn = MultitaskLoss(args).cuda()
 
@@ -133,6 +163,7 @@ if __name__ == "__main__":
             optimizer=optimizer,
             scheduler=scheduler,
             loss_fn=loss_fn,
+            age_stat=age_stat,
         )
 
         ### validation ###
@@ -142,6 +173,7 @@ if __name__ == "__main__":
             model=model,
             loader=val_loader,
             loss_fn=loss_fn,
+            age_stat=age_stat,
         )
 
         ### save model ###

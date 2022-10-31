@@ -52,9 +52,10 @@ class MulitaskDataset(Dataset):  # for train and validation
     def __getitem__(self, idx):
         id, gen, age, age_category, mask, label, img_path = self.data[idx]
         ### 실제 데이터 다 넘김 ###
-        gen, age, age_category, mask, label = map(
-            self.to_tensor, (gen, age, age_category, mask, label)
+        gen, age_category, mask, label = map(
+            self.to_tensor, (gen, age_category, mask, label)
         )
+        age = torch.tensor(float(age))
         path = os.path.join(self.root, img_path)
         image = Image.open(path)
         if self.transform:

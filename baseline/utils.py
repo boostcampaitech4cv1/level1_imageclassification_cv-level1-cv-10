@@ -14,7 +14,6 @@ from torchvision import transforms
 [Age] 0 : <30, 1 : >=30 and <60, 3 : >=60
 """
 
-
 def set_seed(seed=42):
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -31,6 +30,7 @@ def csv_preprocess(csv_file):
         lambda x: 0 if x < 30 else (1 if x < 60 else 2)
     )
     return csv_file
+
 
 def increment_path(root, csv_file):
     data = []
@@ -95,11 +95,21 @@ def build_transform(args=None, phase="train"):
         return test_transform
 
 
-def make_class(gen_pred, age_pred, mask_pred, age_regression=False):
+def make_class(args, gen_pred, age_pred, mask_pred, age_stat=None):
     gen = gen_pred.argmax(dim=1)
     mask = mask_pred.argmax(dim=1)
-    if age_regression:
-        pass
-    else:
+    if args.age_pred == 'regression':
+        age = age_to_class(age_pred.detach(),age_stat,mode=args.age_normalized).squeeze(-1)
+    elif args.age_pred == 'classification':
         age = age_pred.argmax(dim=1)
     return 6 * mask + 3 * gen + age
+
+
+def age_to_class(age,age_stat,mode):
+    if mode == 'normal':
+        age_class = age*age_stat.std+age_stat.mean
+    
+    age_class.apply_(
+        lambda x: 0 if x < 30 else (1 if x < 60 else 2)
+    )
+    return age_class
