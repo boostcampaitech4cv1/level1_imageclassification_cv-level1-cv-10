@@ -14,7 +14,6 @@ from torchvision import transforms
 [Age] 0 : <30, 1 : >=30 and <60, 3 : >=60
 """
 
-
 def set_seed(seed=42):
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -25,12 +24,16 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
 
 
-def csv_preprocess(root, csv_file):
-    data = []
+def csv_preprocess(csv_file):
     csv_file["gender"] = (csv_file["gender"] == "female").astype("int")
     csv_file["age_category"] = csv_file["age"].apply(
         lambda x: 0 if x < 30 else (1 if x < 60 else 2)
     )
+    return csv_file
+
+
+def increment_path(root, csv_file):
+    data = []
     for _, id, gen, _, age, path, age_category in csv_file.itertuples():
         for img_name in os.listdir(os.path.join(root, path)):
             if img_name[0] != ".":
@@ -62,7 +65,7 @@ def build_transform(args=None, phase="train"):
     if phase == "train":
         train_transform = transforms.Compose(
             [
-                #transforms.RandomResizedCrop(size=256, scale=(0.2, 1.0)),
+                # transforms.RandomResizedCrop(size=256, scale=(0.2, 1.0)),
                 transforms.CenterCrop(256),
                 transforms.RandomHorizontalFlip(),
                 # transforms.RandomRotation(degrees=(10,10)),
@@ -83,21 +86,30 @@ def build_transform(args=None, phase="train"):
     else:
         ### TTA 추가 가능 ###
         test_transform = transforms.Compose(
-            [transforms.CenterCrop(256), transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)]
+            [
+                transforms.CenterCrop(256),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean, std=std),
+            ]
         )
         return test_transform
 
 
-def init_log(output_dir):
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s %(message)s",
-        # datefmt='%Y%m%d-%H:%M:%S',
-        datefmt="%H:%M:%S",
-        filename=os.path.join(output_dir, "log.log"),
-        filemode="w",
+def make_class(args, gen_pred, age_pred, mask_pred, age_stat=None):
+    gen = gen_pred.argmax(dim=1)
+    mask = mask_pred.argmax(dim=1)
+    if args.age_pred == 'regression':
+        age = age_to_class(age_pred.detach(),age_stat,mode=args.age_normalized).squeeze(-1)
+    elif args.age_pred == 'classification':
+        age = age_pred.argmax(dim=1)
+    return 6 * mask + 3 * gen + age
+
+
+def age_to_class(age,age_stat,mode):
+    if mode == 'normal':
+        age_class = age*age_stat.std+age_stat.mean
+    
+    age_class.apply_(
+        lambda x: 0 if x < 30 else (1 if x < 60 else 2)
     )
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    logging.getLogger("").addHandler(console)
-    return logging
+    return age_class
