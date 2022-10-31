@@ -36,8 +36,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--val_ratio", type=float, default=0.3)  # train-val slit ratio
-    parser.add_argument("--split_option", type=str, default="different") 
-    parser.add_argument("--stratify", type=bool, default=True)
+    parser.add_argument("--split_option", type=str, default="None")  # different
+    parser.add_argument("--stratify", type=bool, default=False)
     parser.add_argument("--wrs", type=bool, default=True)
 
     parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary
@@ -58,10 +58,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--experiment_name",
         type=str,
-        default="classification - wrs",
+        default="classification - wrs&original dataset",
     )
     args = parser.parse_args()
-    age_stat = None
+    age_stat = None # for regression only
 
     set_seed(args.seed)
 
@@ -71,8 +71,6 @@ if __name__ == "__main__":
     wandb.init(project=args.project_name, name=args.experiment_name, entity="cv-10")
     wandb.config.update(args)
     os.makedirs(save_path, exist_ok=False)
-
-
 
     if args.split_option == "different":
         all_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
@@ -124,10 +122,15 @@ if __name__ == "__main__":
 
     if args.wrs:
         print("WeightedRandomSampler")
-        target = [train_dataset[i][4] for i in range(len(train_dataset))] # target : age category 
+        # target = [train_dataset[i][4] for i in range(len(train_dataset))] # target : age category 
+        # class_sample_count = np.array([len(np.where(target == t)[0]) for t in np.unique(target)])
+        # weight = 1. / class_sample_count
+        # samples_weight = np.array([weight[t] for t in target])
+
+        target = train_data[:,3] # target : age category 
         class_sample_count = np.array([len(np.where(target == t)[0]) for t in np.unique(target)])
         weight = 1. / class_sample_count
-        samples_weight = np.array([weight[t] for t in target])
+        samples_weight = np.array([weight[int(t)] for t in target])
         samples_weight = torch.from_numpy(samples_weight)
         sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight))
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.n_workers)
@@ -138,6 +141,7 @@ if __name__ == "__main__":
             shuffle=True,
             num_workers=args.n_workers,
         )
+        
     val_loader = DataLoader(
         val_dataset,
         batch_size=args.batch_size,

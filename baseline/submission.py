@@ -44,9 +44,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--save_dir",
         type=str,
-        default="/opt/ml/experiment/multitask/classification - wrs(10.31 14:09)",
+        default="/opt/ml/experiment/multitask/classification - wrs&original dataset(10.31 15:03)",
     )
-    parser.add_argument("--target_model", type=str, default="model_21.pth")
+    parser.add_argument("--target_model", type=str, default="model_27.pth")
     args = parser.parse_args()
 
     submission = pd.read_csv(os.path.join(args.test_dir, "info.csv"))
