@@ -63,21 +63,25 @@ def build_transform(args=None, phase="train"):
     std = [0.229, 0.224, 0.225]
 
     if phase == "train":
-        train_transform = transforms.Compose(
-            [
-                # transforms.RandomResizedCrop(size=256, scale=(0.2, 1.0)),
-                transforms.CenterCrop(256),
-                transforms.RandomHorizontalFlip(),
-                # transforms.RandomRotation(degrees=(10,10)),
-                # transforms.RandomVerticalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=mean, std=std),
-            ]
-        )
+        transform = []
+
+        if args.degrees != 0 or args.translate != 0:
+            transform.append(transforms.RandomAffine(degrees=args.degrees,translate=(args.translate,args.translate)))
+        if args.crop_type == "center":
+            transform.append(transforms.CenterCrop(args.in_size)) # 굳이 centercrop을 안 쓸 이유가 있을까?
+        elif args.crop_type == "random":
+            transform.append(transforms.RandomCrop(args.in_size))
+        elif args.crop_type == "random_resized":
+            transform.append(transforms.RandomResizedCrop(args.in_size))
+
+        transform.append(transforms.RandomHorizontalFlip())
+        transform.append(transforms.ToTensor())
+        transform.append(transforms.Normalize(mean=mean, std=std))
+        train_transform = transforms.Compose(transform)
 
         val_transform = transforms.Compose(
             [
-                transforms.CenterCrop(256),
+                transforms.CenterCrop(args.in_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=mean, std=std),
             ]
@@ -87,7 +91,7 @@ def build_transform(args=None, phase="train"):
         ### TTA 추가 가능 ###
         test_transform = transforms.Compose(
             [
-                transforms.CenterCrop(256),
+                transforms.CenterCrop(args.in_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=mean, std=std),
             ]
@@ -108,6 +112,9 @@ def make_class(args, gen_pred, age_pred, mask_pred, age_stat=None):
 def age_to_class(age,age_stat,mode):
     if mode == 'normal':
         age_class = age*age_stat.std+age_stat.mean
+    
+    elif mode == 'minmax':
+        age_class = age*(age_stat.max-age_stat.min)+age_stat.min
     
     age_class.apply_(
         lambda x: 0 if x < 30 else (1 if x < 60 else 2)

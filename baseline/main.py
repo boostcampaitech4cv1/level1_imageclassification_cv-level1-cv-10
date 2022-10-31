@@ -38,15 +38,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--val_ratio", type=float, default=0.3)  # train-val slit ratio
-    parser.add_argument("--split_option", type=str, default="different")  # different or none
+    parser.add_argument("--split_option", type=str, default="none")  # different or none
     parser.add_argument("--stratify", type=bool, default=False)
     parser.add_argument("--wrs", type=bool, default=True)
 
-    parser.add_argument("--age_pred", type=str, default="regression") # classification or regression or ordinary
+    parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary
     parser.add_argument("--age_normalized", type=str, default="normal") # normal or minmax
 
-    # parser.add_argument("--in_size", type=int, default=224) # input size image
-    parser.add_argument("--num_epochs", type=int, default=50)
+    parser.add_argument("--in_size", type=int, default=224) # input size image
+    parser.add_argument("--crop_type", type=str, default="center") # crop type : center or random or random_resized
+    parser.add_argument("--degrees", type=int, default=10) # rotation degree
+    parser.add_argument("--translate", type=float, default=0.1) # translate ratio
+
+    parser.add_argument("--num_epochs", type=int, default=30)
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--batch_size", type=int, default=128)
@@ -56,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_dir", type=str, default="/opt/ml/input/data/train")
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/")
     parser.add_argument("--backbone_name", type=str, default="resnet50")
-    parser.add_argument("--project_name", type=str, default="multitask")
+    parser.add_argument("--project_name", type=str, default="augmentation_test")
     parser.add_argument(
         "--experiment_name",
         type=str,
@@ -92,6 +96,8 @@ if __name__ == "__main__":
                 shuffle=True,
                 random_state=args.seed,  # no stratify
             )
+        train_data = increment_path(os.path.join(args.train_dir, "images"), train_csv)
+        val_data = increment_path(os.path.join(args.train_dir, "images"), val_csv)
     else:
         data = increment_path(os.path.join(args.train_dir, "images"), all_csv)
         if args.stratify:
@@ -119,7 +125,7 @@ if __name__ == "__main__":
             train_data[:,2] = (tmp-age_stat.mean)/age_stat.std
 
             tmp = val_data[:,2].astype(np.float)
-            val_data[:,2] = (tmp[:,2]-age_stat.mean)/age_stat.std
+            val_data[:,2] = (tmp-age_stat.mean)/age_stat.std
         elif args.age_normalized == 'minmax':
             Statistic = namedtuple('Statistic', ['min', 'max'])
             tmp = train_data[:,2].astype(np.float)
@@ -210,9 +216,13 @@ if __name__ == "__main__":
         ### save model ###
         if best_score < score:
             best_epoch, best_score = epoch, score
+            # torch.save(
+            #     {"model": model.state_dict()},
+            #     os.path.join(save_path, "model_" + str(epoch) + ".pth"),
+            # )
             torch.save(
                 {"model": model.state_dict()},
-                os.path.join(save_path, "model_" + str(epoch) + ".pth"),
+                os.path.join(save_path, "best_model.pth"),
             )
             print(">>>>>> SAVED model at {:02d}".format(epoch))
         print("[best] epoch: {}, score : {:.4f}\n".format(best_epoch, best_score))
