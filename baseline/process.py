@@ -86,6 +86,7 @@ def validation(args, epoch, model, loader, loss_fn, age_stat=None):
     preds, labels = torch.tensor([]), torch.tensor([])
     info, time, num = defaultdict(int), datetime.now(), 0
     with torch.no_grad():
+
         # for img, label in tqdm(loader):
         for img, label, gen, age, age_category, mask in loader:
             img, label, gen, age, age_category, mask = (
