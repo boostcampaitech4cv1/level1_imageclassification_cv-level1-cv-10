@@ -27,26 +27,34 @@ data preprocess (ex. background subtraction)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary
+    # parser.add_argument("--val_ratio", type=float, default=0.3)  # train-val slit ratio
+    # parser.add_argument("--split_option", type=str, default="none")  # different or none
+    # parser.add_argument("--stratify", type=bool, default=False)
+    # parser.add_argument("--wrs", type=bool, default=True)
 
-    # parser.add_argument("--in_size", type=int, default=224) # input size image
-    parser.add_argument("--num_epochs", type=int, default=50)
-    parser.add_argument("--lr", type=float, default=0.01)
-    parser.add_argument("--weight_decay", type=float, default=1e-4)
+    parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary
+    parser.add_argument("--age_normalized", type=str, default="normal") # normal or minmax
+
+    parser.add_argument("--in_size", type=int, default=256) # input size image
+    parser.add_argument("--crop_type", type=str, default="center") # crop type : center or random or random_resized
+    parser.add_argument("--degrees", type=int, default=0) # rotation degree
+    parser.add_argument("--translate", type=float, default=0.1) # translate ratio
+
+    parser.add_argument("--num_epochs", type=int, default=30)
+    # parser.add_argument("--lr", type=float, default=0.01)
+    # parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--n_workers", type=int, default=4)
 
-    # parser.add_argument("--num_classes", type=int, default=100)
     parser.add_argument("--backbone_name", type=str, default="resnet50")
     parser.add_argument("--test_dir", type=str, default="/opt/ml/input/data/eval")
-
     parser.add_argument(
         "--save_dir",
         type=str,
-        default="/opt/ml/experiment/multitask/classification - wrs&original dataset(10.31 15:03)",
+        default="/opt/ml/experiment/augmentation_test/7(11.01 10:50)",
     )
-    parser.add_argument("--target_model", type=str, default="model_27.pth")
+    parser.add_argument("--target_model", type=str, default="best_model.pth")
     args = parser.parse_args()
 
     submission = pd.read_csv(os.path.join(args.test_dir, "info.csv"))

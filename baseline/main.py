@@ -38,16 +38,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--val_ratio", type=float, default=0.3)  # train-val slit ratio
-    parser.add_argument("--split_option", type=str, default="none")  # different or none
-    parser.add_argument("--stratify", type=bool, default=False)
+    parser.add_argument("--split_option", type=str, default="different")  # different or none
+    parser.add_argument("--stratify", type=bool, default=True)
     parser.add_argument("--wrs", type=bool, default=True)
 
     parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary
     parser.add_argument("--age_normalized", type=str, default="normal") # normal or minmax
 
-    parser.add_argument("--in_size", type=int, default=224) # input size image
+    parser.add_argument("--in_size", type=int, default=256) # input size image
     parser.add_argument("--crop_type", type=str, default="center") # crop type : center or random or random_resized
-    parser.add_argument("--degrees", type=int, default=10) # rotation degree
+    parser.add_argument("--degrees", type=int, default=0) # rotation degree
     parser.add_argument("--translate", type=float, default=0.1) # translate ratio
 
     parser.add_argument("--num_epochs", type=int, default=30)
@@ -57,14 +57,14 @@ if __name__ == "__main__":
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--n_workers", type=int, default=4)
 
+    parser.add_argument("--backbone_name", type=str, default="resnet50")
     parser.add_argument("--train_dir", type=str, default="/opt/ml/input/data/train")
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/")
-    parser.add_argument("--backbone_name", type=str, default="resnet50")
-    parser.add_argument("--project_name", type=str, default="augmentation_test")
+    parser.add_argument("--project_name", type=str, default="multitask")
     parser.add_argument(
         "--experiment_name",
         type=str,
-        default="classification - wrs&original dataset",
+        default="classification - add augmentation",
     )
     args = parser.parse_args()
     age_stat = None # for regression only
