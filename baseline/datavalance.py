@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 from utils import csv_preprocess
+from utils import increment_path
 
 class ValancedDataset(Dataset):  # for train and validation
     def __init__(self, root, data, male_30_transform, 
@@ -183,7 +184,7 @@ if __name__ == "__main__":
     )
     train_csv = pd.read_csv(os.path.join(train_dir, "train.csv"))
     data = csv_preprocess(os.path.join(train_dir, "images"), train_csv)
-
+    data = increment_path(os.path.join(train_dir, "images"),train_csv)
     valanced_data = ValancedDataset(train_dir, data, male_30_transform,
                                                             female_30_transform,
                                                             male_3060_transform,
