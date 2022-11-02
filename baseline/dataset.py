@@ -2,6 +2,7 @@ import os
 import glob
 
 from PIL import Image
+from rembg import remove
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -38,6 +39,29 @@ class CustomDataset(Dataset):  # for train and validation
             image = self.transform(image)
         return image, torch.tensor(label)
 
+class RmbgMulitaskDataset(Dataset):  # pip install rembg[gpu] 필요, Remove backgraound 적용
+    def __init__(self, root, data, transform=None):
+        self.root = os.path.join(root, "images")
+        self.data = data
+        self.transform = transform
+        self.to_tensor = lambda x: torch.tensor(int(x))
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        id, gen, age, age_category, mask, label, img_path = self.data[idx]
+        ### 실제 데이터 다 넘김 ###
+        gen, age_category, mask, label = map(
+            self.to_tensor, (gen, age_category, mask, label)
+        )
+        age = torch.tensor(float(age))
+        path = os.path.join(self.root, img_path)
+        image = Image.open(path)
+        image = remove(image)
+        if self.transform:
+            image = self.transform(image)
+        return image, label, gen, age, age_category, mask
 
 class MulitaskDataset(Dataset):  # for train and validation
     def __init__(self, root, data, transform=None):
