@@ -4,6 +4,7 @@ from loss import MultitaskLoss
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 import timm
@@ -24,7 +25,6 @@ class CustomModel(nn.Module):
     def forward(self, x):
         x = self.backbone(x)
         return x
-
 
 class MultitaskHead(nn.Module):
     def __init__(self, args, in_features, embed_dim):
@@ -54,12 +54,8 @@ class MultitaskHead(nn.Module):
 
         if args.age_pred == 'classification':
             self.age_head = nn.Linear(in_features=in_features, out_features=3)
-        elif args.age_pred == 'regression':
+        elif args.age_pred == 'regression' or args.age_pred == 'cls_regression':
             self.age_head = nn.Linear(in_features=in_features, out_features=1)
-            # self.age_head = nn.Sequential(
-            #     nn.Linear(in_features=in_features, out_features=1),
-            #     nn.Sigmoid(), # sigmoid를 쓰면 logistic regression 인데 => binary classifcation에 가까워질거같은데?
-            # )
         elif args.age_pred == 'ordinary':
             self.age_head = nn.Linear(in_features=in_features, out_features=1)
 
@@ -67,6 +63,7 @@ class MultitaskHead(nn.Module):
     def forward(self, x):
         gen_pred = self.gen_head(x)
         age_pred = self.age_head(x)
+        # age_pred = 2*F.sigmoid(self.age_head(x)) # for 0~2, logistic regression => binary classification에 가까워질 수 도?
         mask_pred = self.mask_head(x)
         return gen_pred, age_pred, mask_pred
 
@@ -80,6 +77,17 @@ class MultitaskModel(nn.Module):
             )
             self.head = MultitaskHead(args, in_features=2048, embed_dim=128)
 
+        elif args.backbone_name == 'convnext_small':
+            self.backbone = timm.create_model('convnext_small', pretrained=True,num_classes=0)
+            self.head = MultitaskHead(args, in_features=768, embed_dim=128)
+
+        # elif self.args.backbone_name == 'efficientnetv2':
+        #     self.backbone = timm.create_model('efficientnetv2_rw_m', pretrained=True,num_classes=1)
+        # elif self.args.backbone_name == 'efficientnet':
+        #     self.backbone = timm.create_model('tf_efficientnet_b7', pretrained=True,num_classes=1)
+        # elif self.args.backbone_name == 'convnext':
+        #     self.backbone = timm.create_model('convnext_small', pretrained=True,num_classes=1)
+
     def forward(self, x):
         x = self.backbone(x)
         x = self.head(x)
@@ -90,7 +98,39 @@ if __name__ == "__main__":
     from collections import namedtuple
 
     args_template = namedtuple("args_template", ["backbone_name"])
-    args = args_template("resnet50")
+    args = args_template("convnext_small")
+
+    # print(set([name.split("_")[0] for name in timm.list_models(pretrained=True)]))
+    # print()
+
+    # target_model_list = ['vgg','inception','efficientnet','convnext','vit','swin','coat']
+
+    # name = "resnet50"
+    # tmp = timm.create_model(
+    #             name, pretrained=False, num_classes=0
+    #         )
+    # print(name,":",sum(p.numel() for p in tmp.parameters()))
+
+    # for name in timm.list_models(pretrained=True):
+    #     if 'convnext' in name:
+    #         tmp = timm.create_model(
+    #             name, pretrained=False, num_classes=0
+    #         )
+    #         print(name,"",sum(p.numel() for p in tmp.parameters()))
+
+    # convnext_base  87566464
+    # convnext_small  49454688
+    # convnext_tiny  27820128
+
+    # swin_base_patch4_window7_224  86743224
+    # swin_small_patch4_window7_224  48837258
+    # swin_tiny_patch4_window7_224  27519354
+
+    # swinv2_small_window8_256  48959418
+    # swinv2_base_window8_256  86893816
+    # swinv2_tiny_window8_256  27578154
+
+
 
     train_dir = "/opt/ml/input/data/train"
     batch_size = 16
@@ -105,7 +145,6 @@ if __name__ == "__main__":
         data, test_size=val_ratio, shuffle=True, random_state=seed
     )
     train_dataset = MulitaskDataset(train_dir, train_data, transform=train_transform)
-
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     loss_fn = MultitaskLoss(args).cuda()

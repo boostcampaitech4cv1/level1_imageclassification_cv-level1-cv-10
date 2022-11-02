@@ -42,7 +42,11 @@ if __name__ == "__main__":
     parser.add_argument("--stratify", type=bool, default=True)
     parser.add_argument("--wrs", type=bool, default=True)
 
-    parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary
+    parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary or cls_regression
+    # parser.add_argument("--lambda", type=int, default=2) # age loss weight for regression or ordinary or cls_regression
+    parser.add_argument("--lowwer", type=float, default=0.5) # for regression cls_regression
+    parser.add_argument("--upper", type=float, default=1.5) # for regression cls_regression
+
     parser.add_argument("--age_normalized", type=str, default="normal") # normal or minmax
 
     parser.add_argument("--in_size", type=int, default=256) # input size image
@@ -64,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--experiment_name",
         type=str,
-        default="classification - add augmentation",
+        default="classification - focal",
     )
     args = parser.parse_args()
     age_stat = None # for regression only

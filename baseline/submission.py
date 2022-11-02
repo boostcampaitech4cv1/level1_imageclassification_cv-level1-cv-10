@@ -43,16 +43,16 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=int, default=30)
     # parser.add_argument("--lr", type=float, default=0.01)
     # parser.add_argument("--weight_decay", type=float, default=1e-4)
-    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--n_workers", type=int, default=4)
 
-    parser.add_argument("--backbone_name", type=str, default="resnet50")
+    parser.add_argument("--backbone_name", type=str, default="convnext_small")
     parser.add_argument("--test_dir", type=str, default="/opt/ml/input/data/eval")
     parser.add_argument(
         "--save_dir",
         type=str,
-        default="/opt/ml/experiment/augmentation_test/7(11.01 10:50)",
+        default="/opt/ml/experiment/backbone_test/convnext_small(11.02 14:48)",
     )
     parser.add_argument("--target_model", type=str, default="best_model.pth")
     args = parser.parse_args()

@@ -36,16 +36,19 @@ def train(args, epoch, model, loader, optimizer, scheduler, loss_fn, age_stat=No
             gen_loss, age_loss, mask_loss = loss_fn(
                 gen_pred, age_pred, mask_pred, gen, age_category, mask
             )
-            loss = gen_loss + age_loss + mask_loss
         elif args.age_pred == 'regression':
             age = age.unsqueeze(-1)
             gen_loss, age_loss, mask_loss = loss_fn(
                 gen_pred, age_pred, mask_pred, gen, age, mask
             )
-            loss = gen_loss + age_loss + mask_loss # age loss weight?
         elif args.age_pred == 'ordinary':
             pass
-        
+        elif args.age_pred == 'cls_regression':
+            age_category = age_category.float().unsqueeze(-1)
+            gen_loss, age_loss, mask_loss = loss_fn(
+                gen_pred, age_pred, mask_pred, gen, age_category, mask
+            )
+        loss = gen_loss + age_loss + mask_loss
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -104,16 +107,19 @@ def validation(args, epoch, model, loader, loss_fn, age_stat=None):
                 gen_loss, age_loss, mask_loss = loss_fn(
                     gen_pred, age_pred, mask_pred, gen, age_category, mask
                 )
-                loss = gen_loss + age_loss + mask_loss
             elif args.age_pred == 'regression':
                 age = age.unsqueeze(-1)
                 gen_loss, age_loss, mask_loss = loss_fn(
                     gen_pred, age_pred, mask_pred, gen, age, mask
                 )
-                loss = gen_loss + age_loss + mask_loss # age loss weight?
             elif args.age_pred == 'ordinary':
                 pass
-
+            elif args.age_pred == 'cls_regression':
+                age_category = age_category.float().unsqueeze(-1)
+                gen_loss, age_loss, mask_loss = loss_fn(
+                    gen_pred, age_pred, mask_pred, gen, age_category, mask
+                )
+            loss = gen_loss + age_loss + mask_loss
             pred = make_class(args, gen_pred.cpu(), age_pred.cpu(), mask_pred.cpu(), age_stat)
             preds = torch.cat((preds, pred))
             labels = torch.cat((labels, label.cpu()))

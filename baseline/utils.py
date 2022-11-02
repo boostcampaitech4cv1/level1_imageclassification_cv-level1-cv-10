@@ -106,6 +106,10 @@ def make_class(args, gen_pred, age_pred, mask_pred, age_stat=None):
         age = age_to_class(age_pred.detach(),age_stat,mode=args.age_normalized).squeeze(-1)
     elif args.age_pred == 'classification':
         age = age_pred.argmax(dim=1)
+    elif args.age_pred == 'cls_regression':
+        age = age_pred.detach().apply_(
+            lambda x: 0 if x < args.lowwer else (1 if x <args.upper else 2)
+        ).squeeze(-1)
     return 6 * mask + 3 * gen + age
 
 
