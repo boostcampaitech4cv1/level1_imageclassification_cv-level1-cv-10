@@ -68,13 +68,14 @@ def build_transform(args=None, phase="train"):
         if args.degrees != 0 or args.translate != 0:
             transform.append(transforms.RandomAffine(degrees=args.degrees,translate=(args.translate,args.translate)))
         if args.crop_type == "center":
-            transform.append(transforms.CenterCrop(args.in_size)) # 굳이 centercrop을 안 쓸 이유가 있을까?
+            transform.append(transforms.CenterCrop(args.in_size)) 
         elif args.crop_type == "random":
             transform.append(transforms.RandomCrop(args.in_size))
         elif args.crop_type == "random_resized":
             transform.append(transforms.RandomResizedCrop(args.in_size))
 
         transform.append(transforms.RandomHorizontalFlip())
+        transform.append(transforms.ColorJitter(brightness = .0, contrast =.5 ,hue =.3))
         transform.append(transforms.ToTensor())
         transform.append(transforms.Normalize(mean=mean, std=std))
         train_transform = transforms.Compose(transform)
