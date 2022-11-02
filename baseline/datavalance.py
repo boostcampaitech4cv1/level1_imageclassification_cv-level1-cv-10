@@ -116,20 +116,20 @@ if __name__ == "__main__":
 
     male_30_transform = torch.nn.Sequential(         # 2 augmentations -> 3배
 
-            transforms.RandomHorizontalFlip(p=1.0),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
-            # transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3)
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            
 
     )
     female_30_transform = torch.nn.Sequential(       # 1 augmentations -> 2배
         
-            transforms.RandomHorizontalFlip(p=1.0),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3)
             
         
     )
     male_3060_transform = torch.nn.Sequential(      # 3 augmentations -> 4배
         
-            transforms.RandomHorizontalFlip(p=1.0),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             
@@ -137,13 +137,12 @@ if __name__ == "__main__":
     )
     female_3060_transform = torch.nn.Sequential(    # 1 augmentations -> 2배
         
-            transforms.RandomHorizontalFlip(p=1.0),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3)
               
         
     )
-    male_60_transform = torch.nn.Sequential(        # 9 augmentaions -> 10배
+    male_60_transform = torch.nn.Sequential(        # 15 augmentaions -> 16배
         
-            transforms.RandomHorizontalFlip(p=1.0),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
@@ -152,12 +151,18 @@ if __name__ == "__main__":
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3)
                
         
     )
-    female_60_transform = torch.nn.Sequential(      # 9 augmentaions -> 10배
+    female_60_transform = torch.nn.Sequential(      # 15 augmentaions -> 16배
         
-            transforms.RandomHorizontalFlip(p=1.0),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
@@ -166,6 +171,13 @@ if __name__ == "__main__":
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
             transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3),
+            transforms.ColorJitter(brightness= .5,contrast=0.5,saturation=0.5,hue=0.3)
 
           
     )
