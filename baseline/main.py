@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary or cls_regression
     parser.add_argument("--loss_type", type=str, default="focal") # focal or else..
-    parser.add_argument("--lam", type=int, default=1) # age loss weight for regression or ordinary or cls_regression
+    parser.add_argument("--lam", type=float, default=1) # age loss weight for regression or ordinary or cls_regression
 
     parser.add_argument("--in_size", type=int, default=256) # input size image
     parser.add_argument("--crop_type", type=str, default="center") # crop type : center or random or random_resized
