@@ -16,6 +16,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from torch.optim import Adam, SGD
 from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
+# from timm.scheduler.step_lr import StepLRScheduler
+
 
 from utils import *
 from metric import accuracy, macro_f1
@@ -41,9 +43,12 @@ if __name__ == "__main__":
     parser.add_argument("--split_option", type=str, default="different")  # different or none
     parser.add_argument("--stratify", type=bool, default=True)
     parser.add_argument("--wrs", type=bool, default=True)
+    parser.add_argument("--age_normalized", type=str, default="normal") # normal or minmax for regression
+    parser.add_argument("--n_workers", type=int, default=4)
 
-    parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary
-    parser.add_argument("--age_normalized", type=str, default="normal") # normal or minmax
+    parser.add_argument("--age_pred", type=str, default="classification") # classification or regression or ordinary or cls_regression
+    parser.add_argument("--loss_type", type=str, default="focal") # focal or else..
+    parser.add_argument("--lam", type=int, default=1) # age loss weight for regression or ordinary or cls_regression
 
     parser.add_argument("--in_size", type=int, default=256) # input size image
     parser.add_argument("--crop_type", type=str, default="center") # crop type : center or random or random_resized
@@ -54,17 +59,18 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--batch_size", type=int, default=128)
-    parser.add_argument("--dropout", type=float, default=0.2)
-    parser.add_argument("--n_workers", type=int, default=4)
 
     parser.add_argument("--backbone_name", type=str, default="resnet50")
+    parser.add_argument("--activation_head", type=bool, default=False) # actviation for age head
+    parser.add_argument("--dropout", type=float, default=0.2)
+
     parser.add_argument("--train_dir", type=str, default="/opt/ml/input/data/train")
     parser.add_argument("--save_dir", type=str, default="/opt/ml/experiment/")
     parser.add_argument("--project_name", type=str, default="multitask")
     parser.add_argument(
         "--experiment_name",
         type=str,
-        default="classification - add augmentation",
+        default="classification - focal",
     )
     args = parser.parse_args()
     age_stat = None # for regression only
@@ -80,8 +86,9 @@ if __name__ == "__main__":
 
     all_csv = pd.read_csv(os.path.join(args.train_dir, "train.csv"))
     all_csv = csv_preprocess(all_csv)
-    if args.split_option == "different":        
+    if args.split_option == "different":  
         if args.stratify:
+            print('stratify')      
             train_csv, val_csv = train_test_split(
                 all_csv,
                 test_size=args.val_ratio,
@@ -158,6 +165,7 @@ if __name__ == "__main__":
         sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight))
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.n_workers)
     else:
+        print("No WeightedRandomSampler")
         train_loader = DataLoader(
             train_dataset,
             batch_size=args.batch_size,
