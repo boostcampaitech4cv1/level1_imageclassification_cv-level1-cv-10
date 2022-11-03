@@ -36,12 +36,7 @@ class MultitaskHead(nn.Module):
         #     nn.Dropout(args.dropout),
         #     nn.Linear(in_features=embed_dim, out_features=2),
         #     )
-        # self.age_head = nn.Sequential(
-        #     nn.Linear(in_features=in_features, out_features=embed_dim),
-        #     nn.GELU(),
-        #     nn.Dropout(args.dropout),
-        #     nn.Linear(in_features=embed_dim, out_features=3),
-        #     )
+        
         # self.mask_head = nn.Sequential(
         #     nn.Linear(in_features=in_features, out_features=embed_dim),
         #     nn.GELU(),
@@ -53,7 +48,16 @@ class MultitaskHead(nn.Module):
         self.mask_head = nn.Linear(in_features=in_features, out_features=3)
 
         if args.age_pred == 'classification':
-            self.age_head = nn.Linear(in_features=in_features, out_features=3)
+            if args.activation_head:
+                print('activation_head')      
+                self.age_head = nn.Sequential(
+                    nn.Linear(in_features=in_features, out_features=embed_dim),
+                    nn.GELU(),
+                    nn.Dropout(args.dropout),
+                    nn.Linear(in_features=embed_dim, out_features=3),
+                )
+            else:
+                self.age_head = nn.Linear(in_features=in_features, out_features=3)
         elif args.age_pred == 'regression' or args.age_pred == 'cls_regression':
             self.age_head = nn.Linear(in_features=in_features, out_features=1)
         elif args.age_pred == 'ordinary':

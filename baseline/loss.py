@@ -2,99 +2,239 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from typing import Optional
 
 class MultitaskLoss(nn.Module):
     def __init__(self, args=None):
         super(MultitaskLoss, self).__init__()
         # self.args = args
         self.age_pred = args.age_pred
+        self.loss_type = args.loss_type
         self.CE = create_criterion("CE")
         self.MSE = create_criterion("MSE")
+        self.focal = FocalLoss(alpha=0.25,gamma=2)
         # self.ce = create_criterion('CE')
         # self.ce = create_criterion('CE')
 
     def forward(self, gen_pred, age_pred, mask_pred, gen, age, mask):
 
         if self.age_pred == 'classification':
-            age_loss = self.CE(age_pred, age)
+            if self.loss_type == 'focal':
+                age_loss = self.focal(age_pred,age)
+            else:
+                age_loss = self.CE(age_pred, age)
         elif self.age_pred == 'regression' or self.age_pred == 'cls_regression':
             age_loss = self.MSE(age_pred, age)
         elif self.age_pred == 'ordinary':
             age_loss = self.MSE(age_pred, age)
+            
 
         gen_loss = self.CE(gen_pred, gen)
         mask_loss = self.CE(mask_pred, mask)
 
         return gen_loss, age_loss, mask_loss
 
-def focal_loss(labels, logits, alpha, gamma):
-    """Compute the focal loss between `logits` and the ground truth `labels`.
-    Focal loss = -alpha_t * (1-pt)^gamma * log(pt)
-    where pt is the probability of being classified to the true class.
-    pt = p (if true class), otherwise pt = 1 - p. p = sigmoid(logit).
+
+def label_to_one_hot_label(
+    labels: torch.Tensor,
+    num_classes: int,
+    device: Optional[torch.device] = None,
+    dtype: Optional[torch.dtype] = None,
+    eps: float = 1e-6,
+    ignore_index=255,
+) -> torch.Tensor:
+    r"""Convert an integer label x-D tensor to a one-hot (x+1)-D tensor.
+
     Args:
-      labels: A float tensor of size [batch, num_classes].
-      logits: A float tensor of size [batch, num_classes].
-      alpha: A float tensor of size [batch_size]
-        specifying per-example weight for balanced cross entropy.
-      gamma: A float scalar modulating loss from hard and easy examples.
+        labels: tensor with labels of shape :math:`(N, *)`, where N is batch size.
+          Each value is an integer representing correct classification.
+        num_classes: number of classes in labels.
+        device: the desired device of returned tensor.
+        dtype: the desired data type of returned tensor.
+
     Returns:
-      focal_loss: A float32 scalar representing normalized total loss.
-    """    
-    BCLoss = F.binary_cross_entropy_with_logits(input = logits, target = labels,reduction = "none")
+        the labels in one hot tensor of shape :math:`(N, C, *)`,
 
-    if gamma == 0.0:
-        modulator = 1.0
-    else:
-        modulator = torch.exp(-gamma * labels * logits - gamma * torch.log(1 + 
-            torch.exp(-1.0 * logits)))
+    Examples:
+        >>> labels = torch.LongTensor([
+                [[0, 1], 
+                [2, 0]]
+            ])
+        >>> one_hot(labels, num_classes=3)
+        tensor([[[[1.0000e+00, 1.0000e-06],
+                  [1.0000e-06, 1.0000e+00]],
+        
+                 [[1.0000e-06, 1.0000e+00],
+                  [1.0000e-06, 1.0000e-06]],
+        
+                 [[1.0000e-06, 1.0000e-06],
+                  [1.0000e+00, 1.0000e-06]]]])
 
-    loss = modulator * BCLoss
-
-    weighted_loss = alpha * loss
-    focal_loss = torch.sum(weighted_loss)
-
-    focal_loss /= torch.sum(labels)
-    return focal_loss
-
-def CB_loss(labels, logits, samples_per_cls, no_of_classes, loss_type, beta, gamma=None):
-    """Compute the Class Balanced Loss between `logits` and the ground truth `labels`.
-    Class Balanced Loss: ((1-beta)/(1-beta^n))*Loss(labels, logits)
-    where Loss is one of the standard losses used for Neural Networks.
-    Args:
-      labels: A int tensor of size [batch].
-      logits: A float tensor of size [batch, no_of_classes].
-      samples_per_cls: A python list of size [no_of_classes].
-      no_of_classes: total number of classes. int
-      loss_type: string. One of "sigmoid", "focal", "softmax".
-      beta: float. Hyperparameter for Class balanced loss.
-      gamma: float. Hyperparameter for Focal loss.
-    Returns:
-      cb_loss: A float tensor representing class balanced loss
     """
-    effective_num = 1.0 - np.power(beta, samples_per_cls)
-    weights = (1.0 - beta) / np.array(effective_num)
-    weights = weights / np.sum(weights) * no_of_classes
-
-    labels_one_hot = F.one_hot(labels, no_of_classes).float().cpu()
-
-    weights = torch.tensor(weights).float()
-    weights = weights.unsqueeze(0)
-    weights = weights.repeat(labels_one_hot.shape[0],1) * labels_one_hot
-    weights = weights.sum(1)
-    weights = weights.unsqueeze(1)
-    weights = weights.repeat(1,no_of_classes)
+    shape = labels.shape
+    # one hot : (B, C=ignore_index+1, H, W)
+    one_hot = torch.zeros((shape[0], ignore_index+1) + shape[1:], device=device, dtype=dtype)
     
-    logits = logits.cpu()
+    # labels : (B, H, W)
+    # labels.unsqueeze(1) : (B, C=1, H, W)
+    # one_hot : (B, C=ignore_index+1, H, W)
+    one_hot = one_hot.scatter_(1, labels.unsqueeze(1), 1.0) + eps
+    
+    # ret : (B, C=num_classes, H, W)
+    ret = torch.split(one_hot, [num_classes, ignore_index+1-num_classes], dim=1)[0]
+    
+    return ret
 
-    if loss_type == "focal":
-        cb_loss = focal_loss(labels_one_hot, logits, weights, gamma)
-    elif loss_type == "sigmoid":
-        cb_loss = F.binary_cross_entropy_with_logits(input = logits,target = labels_one_hot, weight = weights)
-    elif loss_type == "softmax":
-        pred = logits.softmax(dim = 1)
-        cb_loss = F.binary_cross_entropy(input = pred, target = labels_one_hot, weight = weights)
-    return cb_loss.cuda()
+
+# https://github.com/zhezh/focalloss/blob/master/focalloss.py
+def focal_loss(input, target, alpha, gamma, reduction, eps, ignore_index):
+    
+    r"""Criterion that computes Focal loss.
+
+    According to :cite:`lin2018focal`, the Focal loss is computed as follows:
+
+    .. math::
+
+        \text{FL}(p_t) = -\alpha_t (1 - p_t)^{\gamma} \, \text{log}(p_t)
+
+    Where:
+       - :math:`p_t` is the model's estimated probability for each class.
+
+    Args:
+        input: logits tensor with shape :math:`(N, C, *)` where C = number of classes.
+        target: labels tensor with shape :math:`(N, *)` where each value is :math:`0 ≤ targets[i] ≤ C−1`.
+        alpha: Weighting factor :math:`\alpha \in [0, 1]`.
+        gamma: Focusing parameter :math:`\gamma >= 0`.
+        reduction: Specifies the reduction to apply to the
+          output: ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction
+          will be applied, ``'mean'``: the sum of the output will be divided by
+          the number of elements in the output, ``'sum'``: the output will be
+          summed.
+        eps: Scalar to enforce numerical stabiliy.
+
+    Return:
+        the computed loss.
+
+    Example:
+        >>> N = 5  # num_classes
+        >>> input = torch.randn(1, N, 3, 5, requires_grad=True)
+        >>> target = torch.empty(1, 3, 5, dtype=torch.long).random_(N)
+        >>> output = focal_loss(input, target, alpha=0.5, gamma=2.0, reduction='mean')
+        >>> output.backward()
+    """
+    if not isinstance(input, torch.Tensor):
+        raise TypeError(f"Input type is not a torch.Tensor. Got {type(input)}")
+
+    if not len(input.shape) >= 2:
+        raise ValueError(f"Invalid input shape, we expect BxCx*. Got: {input.shape}")
+
+    if input.size(0) != target.size(0):
+        raise ValueError(f'Expected input batch_size ({input.size(0)}) to match target batch_size ({target.size(0)}).')
+
+    # input : (B, C, H, W)
+    n = input.size(0) # B
+    
+    # out_sie : (B, H, W)
+    out_size = (n,) + input.size()[2:]
+    
+    # input : (B, C, H, W)
+    # target : (B, H, W)
+    if target.size()[1:] != input.size()[2:]:
+        raise ValueError(f'Expected target size {out_size}, got {target.size()}')
+
+    if not input.device == target.device:
+        raise ValueError(f"input and target must be in the same device. Got: {input.device} and {target.device}")
+    
+    if isinstance(alpha, float):
+        pass
+    elif isinstance(alpha, np.ndarray):
+        alpha = torch.from_numpy(alpha)
+        # alpha : (B, C, H, W)
+        alpha = alpha.view(-1, len(alpha), 1, 1).expand_as(input)
+    elif isinstance(alpha, torch.Tensor):
+        # alpha : (B, C, H, W)
+        alpha = alpha.view(-1, len(alpha), 1, 1).expand_as(input)       
+        
+
+    # compute softmax over the classes axis
+    # input_soft : (B, C, H, W)
+    input_soft = F.softmax(input, dim=1) + eps
+    
+    # create the labels one hot tensor
+    # target_one_hot : (B, C, H, W)
+    target_one_hot = label_to_one_hot_label(target.long(), num_classes=input.shape[1], device=input.device, dtype=input.dtype, ignore_index=ignore_index)
+
+    # compute the actual focal loss
+    weight = torch.pow(1.0 - input_soft, gamma)
+    
+    # alpha, weight, input_soft : (B, C, H, W)
+    # focal : (B, C, H, W)
+    focal = -alpha * weight * torch.log(input_soft)
+    
+    # loss_tmp : (B, H, W)
+    loss_tmp = torch.sum(target_one_hot * focal, dim=1)
+
+    if reduction == 'none':
+        # loss : (B, H, W)
+        loss = loss_tmp
+    elif reduction == 'mean':
+        # loss : scalar
+        loss = torch.mean(loss_tmp)
+    elif reduction == 'sum':
+        # loss : scalar
+        loss = torch.sum(loss_tmp)
+    else:
+        raise NotImplementedError(f"Invalid reduction mode: {reduction}")
+    return loss
+
+
+class FocalLoss(nn.Module):
+    r"""Criterion that computes Focal loss.
+
+    According to :cite:`lin2018focal`, the Focal loss is computed as follows:
+
+    .. math:
+
+        FL(p_t) = -alpha_t(1 - p_t)^{gamma}, log(p_t)
+
+    Where:
+       - :math:`p_t` is the model's estimated probability for each class.
+
+    Args:
+        alpha: Weighting factor :math:`\alpha \in [0, 1]`.
+        gamma: Focusing parameter :math:`\gamma >= 0`.
+        reduction: Specifies the reduction to apply to the
+          output: ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction
+          will be applied, ``'mean'``: the sum of the output will be divided by
+          the number of elements in the output, ``'sum'``: the output will be
+          summed.
+        eps: Scalar to enforce numerical stabiliy.
+
+    Shape:
+        - Input: :math:`(N, C, *)` where C = number of classes.
+        - Target: :math:`(N, *)` where each value is
+          :math:`0 ≤ targets[i] ≤ C−1`.
+
+    Example:
+        >>> N = 5  # num_classes
+        >>> kwargs = {"alpha": 0.5, "gamma": 2.0, "reduction": 'mean'}
+        >>> criterion = FocalLoss(**kwargs)
+        >>> input = torch.randn(1, N, 3, 5, requires_grad=True)
+        >>> target = torch.empty(1, 3, 5, dtype=torch.long).random_(N)
+        >>> output = criterion(input, target)
+        >>> output.backward()
+    """
+
+    def __init__(self, alpha, gamma = 2.0, reduction = 'mean', eps = 1e-8, ignore_index=30):
+        super().__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+        self.eps = eps
+        self.ignore_index = ignore_index
+
+    def forward(self, input, target):
+        return focal_loss(input, target, self.alpha, self.gamma, self.reduction, self.eps, self.ignore_index)
 
 class LabelSmoothingLoss(nn.Module):
     def __init__(self, classes=3, smoothing=0.0, dim=-1):
